@@ -7,6 +7,26 @@ document.addEventListener("htmx:configRequest", (event) => {
     }
 });
 
+// Modal: fecha no X, no fundo escuro ou com Esc. O conteúdo vem do servidor via HTMX.
+function closeModal() {
+    const modal = document.getElementById("modal");
+    if (modal) {
+        modal.innerHTML = "";
+    }
+}
+
+document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-close-modal]")) {
+        closeModal();
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        closeModal();
+    }
+});
+
 // Service worker mínimo: permite instalar como app no iPhone (Adicionar à Tela de Início).
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});

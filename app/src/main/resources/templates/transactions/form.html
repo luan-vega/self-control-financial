@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Modal de novo/editar lançamento. Abre como bottom sheet no iPhone. -->
+<div th:fragment="modal" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div class="absolute inset-0 bg-slate-900/50" data-close-modal></div>
+    <div class="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white px-5 pt-5 pb-8 shadow-xl safe-bottom sm:rounded-3xl dark:bg-slate-900"
+         role="dialog" aria-modal="true" aria-labelledby="tx-modal-title">
+        <div class="mb-4 flex items-center justify-between">
+            <h2 id="tx-modal-title" class="text-lg font-semibold"
+                th:text="${transactionId == null} ? 'Novo lançamento' : 'Editar lançamento'">Novo lançamento</h2>
+            <button type="button" data-close-modal aria-label="Fechar"
+                    class="grid size-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form th:object="${form}" class="space-y-4" novalidate
+              th:action="${transactionId == null} ? @{/transactions} : @{/transactions/{id}(id=${transactionId})}" method="post"
+              th:hx-post="${transactionId == null} ? @{/transactions} : @{/transactions/{id}(id=${transactionId})}"
+              hx-target="#modal" hx-swap="innerHTML">
+
+            <!-- Despesa / Receita: trocar o tipo recarrega as categorias do tipo escolhido -->
+            <fieldset class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium dark:bg-slate-800">
+                <legend class="sr-only">Tipo</legend>
+                <label class="cursor-pointer">
+                    <input type="radio" class="peer sr-only" th:field="*{type}" value="EXPENSE"
+                           th:hx-get="@{/transactions/category-options}" hx-trigger="change"
+                           hx-target="#category-field" hx-swap="outerHTML">
+                    <span class="block rounded-lg py-2 text-center text-slate-600 peer-checked:bg-white peer-checked:text-expense peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 dark:text-slate-300 dark:peer-checked:bg-slate-700 dark:peer-checked:text-red-400">Despesa</span>
+                </label>
+                <label class="cursor-pointer">
+                    <input type="radio" class="peer sr-only" th:field="*{type}" value="INCOME"
+                           th:hx-get="@{/transactions/category-options}" hx-trigger="change"
+                           hx-target="#category-field" hx-swap="outerHTML">
+                    <span class="block rounded-lg py-2 text-center text-slate-600 peer-checked:bg-white peer-checked:text-income peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 dark:text-slate-300 dark:peer-checked:bg-slate-700 dark:peer-checked:text-emerald-400">Receita</span>
+                </label>
+            </fieldset>
+
+            <label class="block">
+                <span class="text-sm font-medium">Valor</span>
+                <span class="mt-1 flex items-center rounded-xl border border-slate-300 bg-white px-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950"
+                      th:classappend="${#fields.hasErrors('amount')} ? 'border-red-500!'">
+                    <span class="text-slate-500">R$</span>
+                    <input type="text" th:field="*{amount}" inputmode="decimal" autocomplete="off" placeholder="0,00"
+                           autofocus
+                           class="money w-full bg-transparent px-2 py-3 text-2xl font-semibold outline-none">
+                </span>
+                <span th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            </label>
+
+            <label class="block">
+                <span class="text-sm font-medium">Data</span>
+                <input type="date" th:field="*{occurredOn}" required
+                       class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950">
+                <span th:if="${#fields.hasErrors('occurredOn')}" th:errors="*{occurredOn}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            </label>
+
+            <div th:replace="~{transactions/form :: categoryField}"></div>
+
+            <label class="block">
+                <span class="text-sm font-medium">Descrição <span class="font-normal text-slate-500">(opcional)</span></span>
+                <input type="text" th:field="*{description}" maxlength="200" autocomplete="off" placeholder="Ex.: Supermercado"
+                       class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950">
+                <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            </label>
+
+            <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white active:bg-brand-700">
+                Salvar
+            </button>
+        </form>
+
+        <button th:if="${transactionId != null}" type="button"
+                class="mt-3 w-full rounded-xl py-3 font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                th:hx-delete="@{/transactions/{id}(id=${transactionId})}"
+                hx-confirm="Excluir este lançamento?" hx-swap="none"
+                hx-on::after-request="if (event.detail.successful) window.location.reload()">
+            Excluir lançamento
+        </button>
+    </div>
+</div>
+
+<!-- Campo de categoria. Também é devolvido sozinho por /transactions/category-options. -->
+<div th:fragment="categoryField" id="category-field" th:object="${form}">
+    <label class="block">
+        <span class="text-sm font-medium">Categoria</span>
+        <select th:field="*{categoryId}" required
+                class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950"
+                th:classappend="${#fields.hasErrors('categoryId')} ? 'border-red-500!'">
+            <option value="">Escolha uma categoria</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}">Mercado</option>
+        </select>
+    </label>
+    <span th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+    <p th:if="${#lists.isEmpty(categories)}" class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Nenhuma categoria deste tipo ainda. <a th:href="@{/categories}" class="font-medium text-brand-600 dark:text-brand-500">Criar categorias</a>
+    </p>
+</div>
+
+<!-- Resposta de sucesso: o header HX-Refresh recarrega a página; isto só esvazia o modal. -->
+<div th:fragment="saved"></div>
+
+</body>
+</html>

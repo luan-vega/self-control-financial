@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Rosca SVG calculada no servidor (shared/web/Donut.java). Recebe um Donut. -->
+<div th:fragment="donut(donut)" class="flex items-center gap-5">
+    <svg viewBox="0 0 42 42" class="size-32 shrink-0" role="img" aria-label="Gráfico de gastos por categoria">
+        <circle cx="21" cy="21" r="15.9155" fill="none" stroke-width="6" class="stroke-slate-100 dark:stroke-slate-800"/>
+        <circle th:each="s : ${donut.slices}" cx="21" cy="21" r="15.9155" fill="none" stroke-width="6"
+                th:attr="stroke=${s.color},stroke-dasharray=${s.dashArray},stroke-dashoffset=${s.dashOffset}">
+            <title th:text="|${s.name}: ${s.percent}%|">Categoria</title>
+        </circle>
+    </svg>
+    <ul class="min-w-0 flex-1 space-y-2 text-sm">
+        <li th:each="s : ${donut.slices}" class="flex items-center gap-2">
+            <span class="size-2.5 shrink-0 rounded-full" th:style="|background-color: ${s.color}|"></span>
+            <span class="min-w-0 flex-1 truncate" th:text="${s.name}">Moradia</span>
+            <span class="money text-slate-500 dark:text-slate-400" th:text="|${s.percent}%|">40%</span>
+        </li>
+    </ul>
+</div>
+
+<!-- Linha de lançamento usada no extrato e no relatório. editable=false esconde as ações. -->
+<li th:fragment="entry(e, editable)" th:id="|tx-${e.transaction.id}|" class="flex items-center gap-3 py-3">
+    <button type="button" class="flex min-w-0 flex-1 items-center gap-3 text-left"
+            th:disabled="${!editable}"
+            th:hx-get="${editable} ? @{/transactions/{id}/edit(id=${e.transaction.id})}"
+            hx-target="#modal" hx-swap="innerHTML"
+            th:aria-label="${editable} ? |Editar ${e.transaction.description}|">
+        <span class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-white"
+              th:style="|background-color: ${e.categoryColor}|"
+              th:text="${#strings.substring(e.categoryName, 0, 1)}">M</span>
+        <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium"
+                  th:text="${#strings.isEmpty(e.transaction.description)} ? ${e.categoryName} : ${e.transaction.description}">Descrição</span>
+            <span class="block text-xs text-slate-500 dark:text-slate-400" th:text="|${e.categoryName} · ${@fmt.day(e.transaction.occurredOn)}|">Categoria · 01 out</span>
+        </span>
+        <span class="money shrink-0 text-sm font-semibold"
+              th:classappend="${e.transaction.type.name() == 'INCOME'} ? 'text-income dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'"
+              th:text="${e.transaction.type.name() == 'INCOME'} ? |+ ${@fmt.money(e.transaction.amount)}| : |- ${@fmt.money(e.transaction.amount)}|">R$ 0,00</span>
+    </button>
+    <button th:if="${editable}" type="button"
+            class="grid size-9 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+            th:hx-delete="@{/transactions/{id}(id=${e.transaction.id})}"
+            hx-confirm="Excluir este lançamento?"
+            hx-target="closest li" hx-swap="outerHTML"
+            th:aria-label="|Excluir ${e.transaction.description}|">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    </button>
+</li>
+
+</body>
+</html>

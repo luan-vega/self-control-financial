@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Relatórios</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header class="pt-6 pb-4">
+        <h1 class="text-xl font-semibold">Relatórios</h1>
+    </header>
+
+    <!-- Recarrega quando um lançamento é editado/excluído pela lista abaixo -->
+    <section id="report" th:fragment="report" class="space-y-5"
+             th:hx-get="@{/reports(from=${from},to=${to},categoryId=${categoryId})}"
+             hx-trigger="transactions-changed from:body" hx-target="this" hx-swap="outerHTML">
+        <!-- Atalhos de período -->
+        <div class="flex gap-2 overflow-x-auto pb-1 text-sm">
+            <button th:each="p : ${presets.all()}"
+                    type="button"
+                    class="shrink-0 rounded-full px-3 py-1.5 font-medium ring-1"
+                    th:classappend="${p.from == from and p.to == to} ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-slate-600 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-800'"
+                    th:hx-get="@{/reports(from=${p.from},to=${p.to},categoryId=${categoryId})}"
+                    hx-target="#report" hx-swap="outerHTML" hx-push-url="true"
+                    th:text="${p.label}">Este mês</button>
+        </div>
+
+        <!-- Filtros -->
+        <form th:action="@{/reports}" method="get"
+              th:hx-get="@{/reports}" hx-target="#report" hx-swap="outerHTML" hx-push-url="true"
+              class="space-y-3 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <div class="grid grid-cols-2 gap-2">
+                <label class="block text-sm">
+                    <span class="font-medium">De</span>
+                    <input type="date" name="from" th:value="${from}" required
+                           class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium">Até</span>
+                    <input type="date" name="to" th:value="${to}" required
+                           class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                </label>
+            </div>
+            <label class="block text-sm">
+                <span class="font-medium">Categoria</span>
+                <select name="categoryId" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                    <option value="">Todas</option>
+                    <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}" th:selected="${c.id == categoryId}">Mercado</option>
+                </select>
+            </label>
+            <button type="submit" class="w-full rounded-xl bg-brand-600 py-2.5 font-semibold text-white active:bg-brand-700">Aplicar filtros</button>
+        </form>
+
+        <div th:if="${error}" role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+             th:text="|${error}. Mostrando o mês atual.|">Erro</div>
+
+        <p class="text-sm text-slate-500 dark:text-slate-400"
+           th:text="|${@fmt.date(report.period.from)} a ${@fmt.date(report.period.to)} · ${report.currency.currencyCode}|">01/10/2026 a 31/10/2026 · BRL</p>
+
+        <!-- Totais -->
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <p class="text-slate-500 dark:text-slate-400">Receitas</p>
+                <p class="money mt-0.5 text-sm font-semibold text-income dark:text-emerald-400" th:text="${@fmt.money(report.balance.income())}">R$ 0,00</p>
+            </div>
+            <div class="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <p class="text-slate-500 dark:text-slate-400">Despesas</p>
+                <p class="money mt-0.5 text-sm font-semibold" th:text="${@fmt.money(report.balance.expenses())}">R$ 0,00</p>
+            </div>
+            <div class="rounded-2xl bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <p class="text-slate-500 dark:text-slate-400">Saldo</p>
+                <p class="money mt-0.5 text-sm font-semibold"
+                   th:classappend="${report.balance.net().isNegative()} ? 'text-expense dark:text-red-400'"
+                   th:text="${@fmt.money(report.balance.net())}">R$ 0,00</p>
+            </div>
+        </div>
+
+        <!-- Despesas por categoria -->
+        <div class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium">Despesas por categoria</h2>
+            <p th:if="${#lists.isEmpty(report.expensesByCategory)}" class="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Sem despesas no período.</p>
+            <ul class="mt-4 space-y-3">
+                <li th:each="s : ${report.expensesByCategory}">
+                    <div class="flex justify-between gap-2 text-sm">
+                        <span class="flex min-w-0 items-center gap-2">
+                            <span class="size-2.5 shrink-0 rounded-full" th:style="|background-color: ${s.color}|"></span>
+                            <span class="truncate" th:text="${s.name}">Moradia</span>
+                        </span>
+                        <span class="money shrink-0 text-slate-600 dark:text-slate-300">
+                            <span th:text="${@fmt.money(s.total)}">R$ 0,00</span>
+                            <span class="text-slate-400" th:text="|· ${s.percent}%|">· 40%</span>
+                        </span>
+                    </div>
+                    <div class="mt-1.5 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div class="h-2 rounded-full" th:style="|width: ${s.percent}%; background-color: ${s.color}|"></div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Receitas por categoria -->
+        <div th:unless="${#lists.isEmpty(report.incomeByCategory)}"
+             class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium">Receitas por categoria</h2>
+            <ul class="mt-4 space-y-3">
+                <li th:each="s : ${report.incomeByCategory}" class="flex justify-between gap-2 text-sm">
+                    <span class="flex min-w-0 items-center gap-2">
+                        <span class="size-2.5 shrink-0 rounded-full" th:style="|background-color: ${s.color}|"></span>
+                        <span class="truncate" th:text="${s.name}">Salário</span>
+                    </span>
+                    <span class="money shrink-0 text-income dark:text-emerald-400" th:text="${@fmt.money(s.total)}">R$ 0,00</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Evolução mensal: barras de receita (verde) e despesa (vermelho) por mês -->
+        <div th:if="${#lists.size(report.months) > 1}"
+             th:with="max=${report.largestMonthlyAmount()}"
+             class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-medium">Mês a mês</h2>
+                <p class="flex gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-income"></span>Receitas</span>
+                    <span class="flex items-center gap-1"><span class="size-2 rounded-full bg-expense"></span>Despesas</span>
+                </p>
+            </div>
+            <div class="mt-4 flex h-40 items-end gap-2 overflow-x-auto">
+                <div th:each="m : ${report.months}" class="flex h-full min-w-8 flex-1 flex-col items-center gap-1">
+                    <div class="flex w-full flex-1 items-end justify-center gap-0.5">
+                        <div class="w-2.5 rounded-t bg-income" th:style="|height: ${@fmt.scale(m.balance.income(), max)}%|"
+                             th:title="|Receitas: ${@fmt.money(m.balance.income())}|"></div>
+                        <div class="w-2.5 rounded-t bg-expense" th:style="|height: ${@fmt.scale(m.balance.expenses(), max)}%|"
+                             th:title="|Despesas: ${@fmt.money(m.balance.expenses())}|"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400" th:text="${@fmt.shortMonth(m.month)}">Out/26</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lançamentos do período -->
+        <div class="rounded-3xl bg-white px-5 py-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="pt-3 font-medium" th:text="|Lançamentos (${#lists.size(entries)})|">Lançamentos</h2>
+            <p th:if="${#lists.isEmpty(entries)}" class="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Nenhum lançamento no período.</p>
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                <th:block th:each="e : ${entries}"><li th:replace="~{fragments/charts :: entry(${e}, true)}"></li></th:block>
+            </ul>
+        </div>
+    </section>
+</main>
+</body>
+</html>
