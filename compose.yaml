@@ -1,0 +1,40 @@
+# Ambiente local: `docker compose up -d db` e rode a app pela IDE/Maven,
+# ou `docker compose up --build` para subir tudo em containers.
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Usuário da aplicação (sem superusuário, para o RLS valer). Criado pelo script em docker/db.
+      APP_DB_NAME: selfcontrol
+      APP_DB_USER: selfcontrol
+      APP_DB_PASSWORD: selfcontrol
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+      - ./docker/db/init-app-user.sh:/docker-entrypoint-initdb.d/10-init-app-user.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    profiles: ["app"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/selfcontrol
+      DB_USER: selfcontrol
+      DB_PASSWORD: selfcontrol
+      COOKIE_SECURE: "false"
+      SPRING_PROFILES_ACTIVE: dev
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:

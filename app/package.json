@@ -1,0 +1,13 @@
+{
+  "name": "self-control-financial-frontend",
+  "private": true,
+  "description": "Build do CSS (Tailwind). Rodado pelo Maven via frontend-maven-plugin.",
+  "scripts": {
+    "build:css": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --minify",
+    "watch:css": "tailwindcss -i src/main/frontend/app.css -o target/classes/static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}
