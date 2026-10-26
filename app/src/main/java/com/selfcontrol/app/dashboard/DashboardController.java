@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.security.Principal;
 import java.time.YearMonth;
 
 @Controller
@@ -23,10 +22,9 @@ class DashboardController {
     @GetMapping("/")
     String home(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
                 @RequestHeader(name = "HX-Request", required = false) String htmx,
-                Principal principal,
                 Model model) {
         YearMonth selected = month != null ? month : YearMonth.now();
-        model.addAttribute("view", dashboard.monthSummary(principal.getName(), selected));
+        model.addAttribute("view", dashboard.monthSummary(selected));
         return htmx != null ? "dashboard/index :: summary" : "dashboard/index";
     }
 }

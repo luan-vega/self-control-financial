@@ -1,19 +1,21 @@
 package com.selfcontrol.app.dashboard;
 
-import com.selfcontrol.domain.money.Money;
+import com.selfcontrol.app.shared.web.Donut;
+import com.selfcontrol.app.transaction.TransactionEntry;
 import com.selfcontrol.domain.transaction.Balance;
-import com.selfcontrol.domain.transaction.TransactionType;
 
-import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
-public record DashboardView(YearMonth month, Balance balance, List<Entry> recent, List<CategoryTotal> topExpenses) {
-
-    public record Entry(String description, String category, TransactionType type, Money amount, LocalDate date) {
-    }
-
-    /** share vai de 0 a 100 e alimenta a largura da barra no template. */
-    public record CategoryTotal(String category, Money total, int share) {
-    }
+/**
+ * Tela inicial: saldo acumulado, receitas/despesas do mês, gastos por categoria (rosca) e
+ * últimos lançamentos do mês.
+ */
+public record DashboardView(
+        YearMonth month,
+        Balance total,
+        Balance balance,
+        Donut expenses,
+        List<TransactionEntry> recent,
+        boolean hasCategories) {
 }

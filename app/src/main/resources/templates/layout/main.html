@@ -31,33 +31,43 @@
     <main class="flex-1 px-4 pb-28 safe-top" layout:fragment="content"></main>
 </div>
 
+<!-- Modal (bottom sheet no iPhone). O HTMX injeta o formulário aqui; ver static/js/app.js -->
+<div id="modal" sec:authorize="isAuthenticated()"></div>
+
 <!-- Barra de navegação inferior (estilo app nativo) -->
-<nav sec:authorize="isAuthenticated()"
-     class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/90 backdrop-blur safe-bottom dark:border-slate-800 dark:bg-slate-900/90">
-    <div class="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-2 pb-1 text-[11px] font-medium text-slate-500">
-        <a th:href="@{/}" class="flex flex-col items-center gap-1 py-1 text-brand-600">
-            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+<nav sec:authorize="isAuthenticated()" aria-label="Navegação principal"
+     class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/90 backdrop-blur safe-bottom dark:border-slate-800 dark:bg-slate-900/90">
+    <div class="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-2 pb-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        <a th:href="@{/}" class="flex flex-col items-center gap-1 py-1"
+           th:classappend="${section == 'home'} ? 'text-brand-600 dark:text-brand-500'"
+           th:attrappend="aria-current=${section == 'home'} ? 'page'">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
             Início
         </a>
-        <a href="#" class="flex flex-col items-center gap-1 py-1">
-            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <a th:href="@{/transactions}" class="flex flex-col items-center gap-1 py-1"
+           th:classappend="${section == 'transactions'} ? 'text-brand-600 dark:text-brand-500'"
+           th:attrappend="aria-current=${section == 'transactions'} ? 'page'">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
             Extrato
         </a>
-        <a href="#" class="-mt-6 flex flex-col items-center" aria-label="Novo lançamento">
-            <span class="grid size-14 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30">
-                <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <button type="button" class="-mt-6 flex flex-col items-center" aria-label="Novo lançamento"
+                th:hx-get="@{/transactions/new}" hx-target="#modal" hx-swap="innerHTML">
+            <span class="grid size-14 place-items-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 active:bg-brand-700">
+                <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             </span>
-        </a>
-        <a href="#" class="flex flex-col items-center gap-1 py-1">
-            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        </button>
+        <a th:href="@{/reports}" class="flex flex-col items-center gap-1 py-1"
+           th:classappend="${section == 'reports'} ? 'text-brand-600 dark:text-brand-500'"
+           th:attrappend="aria-current=${section == 'reports'} ? 'page'">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
             Relatórios
         </a>
-        <form th:action="@{/logout}" method="post" class="contents">
-            <button type="submit" class="flex flex-col items-center gap-1 py-1">
-                <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                Sair
-            </button>
-        </form>
+        <a th:href="@{/categories}" class="flex flex-col items-center gap-1 py-1"
+           th:classappend="${section == 'categories'} ? 'text-brand-600 dark:text-brand-500'"
+           th:attrappend="aria-current=${section == 'categories'} ? 'page'">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+            Categorias
+        </a>
     </div>
 </nav>
 </body>

@@ -1,13 +1,11 @@
 package com.selfcontrol.app;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -15,90 +13,126 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Garante que as políticas de RLS da V2 isolam os dados de cada usuário.
- * O usuário do container é superusuário (que ignora RLS), então as consultas rodam
- * com um papel comum, como o usuário da aplicação em produção.
+ * Garante que as políticas de RLS isolam os dados de cada usuário e que o
+ * RlsTransactionManager liga o usuário logado ao contexto do banco automaticamente.
  */
-@SpringBootTest
-@Import(TestcontainersConfiguration.class)
-class RowLevelSecurityTests {
+class RowLevelSecurityTests extends IntegrationTest {
 
-    private static final String APP_ROLE = "rls_app_user";
+    @Test
+    void applicationConnectsWithARoleThatCannotBypassRls() {
+        Boolean bypasses = jdbc.sql("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user")
+                .query(Boolean.class)
+                .single();
 
-    @Autowired
-    JdbcClient jdbc;
-
-    @Autowired
-    TransactionTemplate tx;
-
-    @BeforeEach
-    void createUnprivilegedRole() {
-        jdbc.sql("""
-                DO $$ BEGIN
-                    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '%s') THEN
-                        CREATE ROLE %s NOLOGIN NOSUPERUSER NOBYPASSRLS;
-                    END IF;
-                END $$
-                """.formatted(APP_ROLE, APP_ROLE)).update();
-        jdbc.sql("GRANT SELECT, INSERT ON category, financial_transaction TO " + APP_ROLE).update();
+        assertThat(bypasses).isFalse();
     }
 
     @Test
     void usersOnlySeeTheirOwnRows() {
-        UUID alice = createUser("alice@example.com");
-        UUID bob = createUser("bob@example.com");
+        TestUser alice = newUser();
+        TestUser bob = newUser();
 
-        asUser(alice, () -> jdbc.sql("""
-                        INSERT INTO financial_transaction (user_id, type, amount_cents, currency, occurred_on)
-                        VALUES (:user, 'EXPENSE', 1500, 'BRL', current_date)
-                        """)
-                .param("user", alice)
-                .update());
-
-        int seenByAlice = asUser(alice, this::countTransactions);
-        int seenByBob = asUser(bob, this::countTransactions);
-        int seenWithoutUser = tx.execute(s -> {
-            jdbc.sql("SET LOCAL ROLE " + APP_ROLE).update();
-            return countTransactions();
+        as(alice, () -> {
+            UUID category = insertCategory("Mercado");
+            return jdbc.sql("""
+                            INSERT INTO financial_transaction (category_id, type, amount_cents, currency, occurred_on)
+                            VALUES (:category, 'EXPENSE', 1500, 'BRL', current_date)
+                            """)
+                    .param("category", category)
+                    .update();
         });
 
-        assertThat(seenByAlice).isEqualTo(1);
-        assertThat(seenByBob).isZero();
-        assertThat(seenWithoutUser).as("sem usuário no contexto").isZero();
+        int aliceTransactions = as(alice, this::countTransactions);
+        int aliceCategories = as(alice, this::countCategories);
+        int bobTransactions = as(bob, this::countTransactions);
+        int bobCategories = as(bob, this::countCategories);
+        int withoutUser = tx.execute(s -> countTransactions());
+
+        assertThat(aliceTransactions).isEqualTo(1);
+        assertThat(aliceCategories).isEqualTo(1);
+        assertThat(bobTransactions).isZero();
+        assertThat(bobCategories).isZero();
+        assertThat(withoutUser).as("sem usuário no contexto").isZero();
+    }
+
+    @Test
+    void contextIsResolvedByEmailWhenThePrincipalHasNoId() {
+        TestUser alice = newUser();
+        as(alice, () -> insertCategory("Moradia"));
+
+        int seen = withMockPrincipal(alice.email(), () -> tx.execute(s -> countCategories()));
+
+        assertThat(seen).isEqualTo(1);
     }
 
     @Test
     void cannotWriteRowsForAnotherUser() {
-        UUID alice = createUser("alice2@example.com");
-        UUID bob = createUser("bob2@example.com");
+        TestUser alice = newUser();
+        TestUser bob = newUser();
 
-        assertThatThrownBy(() -> asUser(bob, () -> jdbc.sql("""
+        assertThatThrownBy(() -> as(bob, () -> jdbc.sql("""
                         INSERT INTO category (user_id, name, type) VALUES (:user, 'Mercado', 'EXPENSE')
                         """)
-                .param("user", alice)
+                .param("user", alice.id())
                 .update()))
                 .rootCause()
                 .hasMessageContaining("violates row-level security policy");
+    }
+
+    @Test
+    void cannotPointATransactionToAnotherUsersCategory() {
+        TestUser alice = newUser();
+        TestUser bob = newUser();
+        UUID aliceCategory = as(alice, () -> insertCategory("Mercado"));
+
+        // A FK simples passaria (checagens de FK ignoram RLS); a FK composta (category_id, user_id) barra.
+        assertThatThrownBy(() -> as(bob, () -> jdbc.sql("""
+                        INSERT INTO financial_transaction (category_id, type, amount_cents, currency, occurred_on)
+                        VALUES (:category, 'EXPENSE', 100, 'BRL', current_date)
+                        """)
+                .param("category", aliceCategory)
+                .update()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void contextDoesNotLeakBetweenTransactionsOnThePooledConnection() {
+        TestUser alice = newUser();
+        as(alice, () -> insertCategory("Lazer"));
+
+        int seen = as(alice, this::countCategories);
+        String afterCommit = tx.execute(s -> jdbc.sql("SELECT coalesce(current_setting('app.current_user_id', true), '')")
+                .query(String.class).single());
+
+        assertThat(seen).isEqualTo(1);
+        assertThat(afterCommit).isEmpty();
+    }
+
+    private UUID insertCategory(String name) {
+        return jdbc.sql("INSERT INTO category (name, type) VALUES (:name, 'EXPENSE') RETURNING id")
+                .param("name", name)
+                .query(UUID.class)
+                .single();
     }
 
     private int countTransactions() {
         return jdbc.sql("SELECT count(*) FROM financial_transaction").query(Integer.class).single();
     }
 
-    private <T> T asUser(UUID userId, Supplier<T> work) {
-        return tx.execute(status -> {
-            jdbc.sql("SELECT set_config('app.current_user_id', :id, true)")
-                    .param("id", userId.toString())
-                    .query(String.class).single();
-            jdbc.sql("SET LOCAL ROLE " + APP_ROLE).update();
-            return work.get();
-        });
+    private int countCategories() {
+        return jdbc.sql("SELECT count(*) FROM category").query(Integer.class).single();
     }
 
-    private UUID createUser(String email) {
-        return jdbc.sql("INSERT INTO app_user (email, display_name) VALUES (:email, 'Teste') RETURNING id")
-                .param("email", email)
-                .query(UUID.class)
-                .single();
+    private static <T> T withMockPrincipal(String email, Supplier<T> work) {
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(UsernamePasswordAuthenticationToken
+                .authenticated(email, null, List.of()));
+        var previous = SecurityContextHolder.getContext();
+        SecurityContextHolder.setContext(context);
+        try {
+            return work.get();
+        } finally {
+            SecurityContextHolder.setContext(previous);
+        }
     }
 }

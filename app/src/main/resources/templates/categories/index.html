@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Categorias</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header class="pt-6 pb-4">
+        <h1 class="text-xl font-semibold">Categorias</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Organize receitas e despesas. A cor aparece nos gráficos.</p>
+    </header>
+
+    <section id="category-list" th:fragment="list" class="space-y-5">
+        <div th:if="${error}" role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+             th:text="${error}">Erro</div>
+
+        <!-- Nova categoria -->
+        <form th:object="${form}" th:action="@{/categories}" method="post" novalidate
+              th:hx-post="@{/categories}" hx-target="#category-list" hx-swap="outerHTML"
+              class="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="mb-3 font-medium">Nova categoria</h2>
+            <div class="flex gap-2">
+                <label class="shrink-0">
+                    <span class="sr-only">Cor</span>
+                    <input type="color" th:field="*{color}" class="h-12 w-12 cursor-pointer rounded-xl border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950">
+                </label>
+                <label class="min-w-0 flex-1">
+                    <span class="sr-only">Nome</span>
+                    <input type="text" th:field="*{name}" maxlength="60" placeholder="Nome" autocomplete="off"
+                           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950"
+                           th:classappend="${#fields.hasErrors('name')} ? 'border-red-500!'">
+                </label>
+            </div>
+            <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            <span th:if="${#fields.hasErrors('color')}" th:errors="*{color}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            <div class="mt-3 flex gap-2">
+                <label class="min-w-0 flex-1">
+                    <span class="sr-only">Tipo</span>
+                    <select th:field="*{type}" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-950">
+                        <option value="EXPENSE">Despesa</option>
+                        <option value="INCOME">Receita</option>
+                    </select>
+                </label>
+                <button type="submit" class="rounded-xl bg-brand-600 px-5 font-semibold text-white active:bg-brand-700">Adicionar</button>
+            </div>
+        </form>
+
+        <div th:if="${empty}" class="rounded-3xl bg-brand-50 p-5 text-center text-sm dark:bg-brand-700/20">
+            <p class="text-slate-700 dark:text-slate-200">Você ainda não tem categorias.</p>
+            <button type="button" class="mt-3 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white"
+                    th:hx-post="@{/categories/defaults}" hx-target="#category-list" hx-swap="outerHTML">
+                Criar categorias sugeridas
+            </button>
+        </div>
+
+        <div th:each="group : ${groups}"
+             th:unless="${#lists.isEmpty(group.categories)}"
+             class="rounded-3xl bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="pt-3 pb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400" th:text="${group.label}">Despesas</h2>
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                <li th:each="c : ${group.categories}" th:id="|category-${c.id}|" class="py-2">
+                    <!-- Edição inline -->
+                    <form th:if="${editingId == c.id}" th:object="${editForm}" novalidate
+                          th:action="@{/categories/{id}(id=${c.id})}" method="post"
+                          th:hx-post="@{/categories/{id}(id=${c.id})}" hx-target="#category-list" hx-swap="outerHTML"
+                          class="space-y-2 py-1">
+                        <div class="flex gap-2">
+                            <input type="color" th:field="*{color}" aria-label="Cor"
+                                   class="h-11 w-11 shrink-0 cursor-pointer rounded-xl border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950">
+                            <input type="text" th:field="*{name}" maxlength="60" aria-label="Nome" autofocus
+                                   class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                        </div>
+                        <select th:field="*{type}" aria-label="Tipo"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                            <option value="EXPENSE">Despesa</option>
+                            <option value="INCOME">Receita</option>
+                        </select>
+                        <p th:if="${#fields.hasAnyErrors()}" class="text-sm text-red-600 dark:text-red-400">
+                            <span th:each="err : ${#fields.allErrors()}" th:text="${err}" class="block">erro</span>
+                        </p>
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 rounded-xl bg-brand-600 py-2 font-semibold text-white">Salvar</button>
+                            <button type="button" class="flex-1 rounded-xl bg-slate-100 py-2 font-medium dark:bg-slate-800"
+                                    th:hx-get="@{/categories}" hx-target="#category-list" hx-swap="outerHTML">Cancelar</button>
+                        </div>
+                    </form>
+
+                    <div th:unless="${editingId == c.id}" class="flex items-center gap-3">
+                        <span class="size-4 shrink-0 rounded-full" th:style="|background-color: ${c.color}|"></span>
+                        <span class="min-w-0 flex-1 truncate" th:text="${c.name}">Mercado</span>
+                        <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-slate-800"
+                                th:hx-get="@{/categories/{id}/edit(id=${c.id})}" hx-target="#category-list" hx-swap="outerHTML"
+                                th:aria-label="|Editar ${c.name}|">Editar</button>
+                        <button type="button" class="grid size-9 place-items-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                                th:hx-delete="@{/categories/{id}(id=${c.id})}" hx-target="#category-list" hx-swap="outerHTML"
+                                th:hx-confirm="|Excluir a categoria ${c.name}?|"
+                                th:aria-label="|Excluir ${c.name}|">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                        </button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </section>
+</main>
+</body>
+</html>
