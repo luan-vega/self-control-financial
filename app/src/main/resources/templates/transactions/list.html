@@ -8,8 +8,12 @@
 </head>
 <body>
 <main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
-    <header class="pt-6 pb-4">
+    <header class="flex items-center justify-between pt-6 pb-4">
         <h1 class="text-xl font-semibold">Extrato</h1>
+        <div class="flex gap-1 text-sm font-medium">
+            <a th:href="@{/imports/new}" class="rounded-full px-3 py-1.5 text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-slate-800">Importar</a>
+            <a th:href="@{/inbox}" class="rounded-full px-3 py-1.5 text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-slate-800">Caixa de entrada</a>
+        </div>
     </header>
 
     <!-- Recarrega sozinho quando um lançamento é excluído (evento transactions-changed) -->

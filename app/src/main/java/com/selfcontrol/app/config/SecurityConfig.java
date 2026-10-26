@@ -1,12 +1,18 @@
 package com.selfcontrol.app.config;
 
 import com.selfcontrol.app.auth.AppOidcUserService;
+import com.selfcontrol.app.webhook.WebhookController;
+import com.selfcontrol.app.webhook.WebhookTokenFilter;
+import com.selfcontrol.app.webhook.WebhookTokenService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -15,6 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -30,6 +37,24 @@ class SecurityConfig {
             "/manifest.webmanifest", "/sw.js",
             "/actuator/health/**"
     };
+
+    /**
+     * Webhook dos Atalhos do iOS: sem sessão e sem CSRF (não há navegador nem cookie), autenticado
+     * só pelo token secreto. Vem antes da cadeia principal.
+     */
+    @Bean
+    @Order(1)
+    SecurityFilterChain webhookFilterChain(HttpSecurity http, WebhookTokenService tokens) throws Exception {
+        http
+                .securityMatcher(WebhookController.PATH)
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requestCache(AbstractHttpConfigurer::disable)
+                .addFilterBefore(new WebhookTokenFilter(tokens), AuthorizationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+        return http.build();
+    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,

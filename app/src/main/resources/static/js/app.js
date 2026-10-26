@@ -31,3 +31,75 @@ document.addEventListener("keydown", (event) => {
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
+
+// Upload por arrastar e soltar: o arquivo solto vai para o input, e o change envia o formulário (HTMX).
+document.addEventListener("dragover", (event) => {
+    const zone = event.target.closest("[data-dropzone]");
+    if (zone) {
+        event.preventDefault();
+        zone.dataset.dragging = "";
+    }
+});
+
+document.addEventListener("dragleave", (event) => {
+    const zone = event.target.closest("[data-dropzone]");
+    if (zone && !zone.contains(event.relatedTarget)) {
+        delete zone.dataset.dragging;
+    }
+});
+
+document.addEventListener("drop", (event) => {
+    const zone = event.target.closest("[data-dropzone]");
+    if (!zone) {
+        return;
+    }
+    event.preventDefault();
+    delete zone.dataset.dragging;
+    const input = zone.querySelector("input[type=file]");
+    if (input && event.dataTransfer.files.length > 0) {
+        input.files = event.dataTransfer.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+});
+
+// Mostra o nome do arquivo escolhido na área de upload.
+document.addEventListener("change", (event) => {
+    const input = event.target;
+    const zone = input.closest && input.closest("[data-dropzone]");
+    if (zone && input.files && input.files.length > 0) {
+        const label = zone.querySelector("[data-file-name]");
+        if (label) {
+            label.textContent = input.files[0].name;
+        }
+    }
+});
+
+// "Marcar todas": data-check-all=".seletor" marca/desmarca as caixas habilitadas.
+document.addEventListener("change", (event) => {
+    const selector = event.target.dataset && event.target.dataset.checkAll;
+    if (selector) {
+        document.querySelectorAll(selector).forEach((box) => {
+            if (!box.disabled) {
+                box.checked = event.target.checked;
+            }
+        });
+    }
+});
+
+// Botão copiar: data-copy="#id-do-input".
+document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-copy]");
+    if (!button) {
+        return;
+    }
+    const field = document.querySelector(button.dataset.copy);
+    if (field && navigator.clipboard) {
+        navigator.clipboard.writeText(field.value).then(() => {
+            const original = button.textContent;
+            button.textContent = "Copiado";
+            setTimeout(() => { button.textContent = original; }, 1500);
+        });
+    } else if (field) {
+        field.select();
+    }
+});

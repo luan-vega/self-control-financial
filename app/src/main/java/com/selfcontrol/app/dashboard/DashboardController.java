@@ -1,5 +1,6 @@
 package com.selfcontrol.app.dashboard;
 
+import com.selfcontrol.app.inbox.InboxClient;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,9 +14,11 @@ import java.time.YearMonth;
 class DashboardController {
 
     private final DashboardClient dashboard;
+    private final InboxClient inbox;
 
-    DashboardController(DashboardClient dashboard) {
+    DashboardController(DashboardClient dashboard, InboxClient inbox) {
         this.dashboard = dashboard;
+        this.inbox = inbox;
     }
 
     /** Página inicial. Em requisições HTMX (troca de mês) devolve só o fragmento do resumo. */
@@ -25,6 +28,9 @@ class DashboardController {
                 Model model) {
         YearMonth selected = month != null ? month : YearMonth.now();
         model.addAttribute("view", dashboard.monthSummary(selected));
+        if (htmx == null) {
+            model.addAttribute("inboxCount", inbox.pendingCount());
+        }
         return htmx != null ? "dashboard/index :: summary" : "dashboard/index";
     }
 }

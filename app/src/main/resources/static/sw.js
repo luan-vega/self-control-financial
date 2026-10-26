@@ -1,6 +1,6 @@
 // Service worker: só guarda os arquivos estáticos para abrir mais rápido.
 // Páginas e dados financeiros sempre vêm da rede (nada sensível em cache).
-const CACHE = "self-control-static-v2";
+const CACHE = "self-control-static-v3";
 const STATIC = ["/css/app.css", "/js/app.js", "/icons/icon.svg", "/webjars/htmx.org/dist/htmx.min.js"];
 
 self.addEventListener("install", (event) => {

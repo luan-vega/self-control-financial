@@ -42,7 +42,7 @@ PostgreSQL (RLS: cada usuário só enxerga as próprias linhas)
 - `domain/`: regras de negócio em Java puro, sem nenhum framework. O `maven-enforcer-plugin` quebra o build se alguém adicionar Spring, Jakarta ou jOOQ aqui. Testado só com JUnit.
 - `app/`: aplicação Spring Boot, organizada por funcionalidade (`auth`, `dashboard`, ...) e não por camada técnica. Dentro de cada pacote: controller → client/service → repository.
 
-Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md).
+Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md). Importação, caixa de entrada e webhook dos Atalhos: [docs/fase-2.md](docs/fase-2.md).
 
 **Decisões importantes**
 
@@ -93,6 +93,10 @@ Ative o perfil `google` e defina `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. A 
 - **Relatórios**: atalhos de período, filtro de datas e categoria, despesas e receitas por categoria, evolução mês a mês.
 - **Categorias**: crie, renomeie, troque a cor ou exclua. Uma conta nova pode criar as categorias sugeridas com um toque. Categorias com lançamentos não podem ser excluídas.
 
+- **Importar** (no extrato ou na caixa de entrada): arraste um OFX ou CSV do banco, revise o preview (novas, duplicadas, com erro) e envie para a caixa de entrada.
+- **Caixa de entrada** (ícone no início, com o número de pendentes): escolha a categoria, edite, confirme ou descarte em lote. Só o que você confirma entra nas contas.
+- **Atalho do iPhone**: gere o token e configure a automação da Carteira para cada compra no cartão cair na caixa de entrada. Passo a passo em [docs/fase-2.md](docs/fase-2.md).
+
 Tudo também está disponível em JSON em `/api/categories`, `/api/transactions` e `/api/reports` (mesma sessão + CSRF), documentado em [docs/fase-1.md](docs/fase-1.md).
 
 ## Testes
@@ -121,6 +125,9 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 │       │   ├── transaction/     # lançamentos: serviço, API JSON, extrato e modal
 │       │   ├── report/          # relatórios com jOOQ: serviço, API JSON e tela
 │       │   ├── dashboard/       # tela inicial
+│       │   ├── importing/       # import OFX/CSV: parsers, preview, confirmação, histórico
+│       │   ├── inbox/           # caixa de entrada (pendentes de import e webhook)
+│       │   ├── webhook/         # webhook dos Atalhos do iOS: token, filtro, tela de configuração
 │       │   ├── config/          # Spring Security
 │       │   └── shared/          # RLS (db), usuário atual (security), erros, formatação e gráficos (web)
 │       └── resources/
@@ -130,6 +137,7 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 ├── compose.yaml                 # Postgres local (+ app opcional)
 ├── docker/db/                   # cria o usuário da app sem privilégios (usado também nos testes)
 ├── docs/fase-1.md               # entidades, RLS, endpoints e telas
+├── docs/fase-2.md               # importação, caixa de entrada, webhook e solução de problemas
 ├── Dockerfile
 └── .github/workflows/ci.yml
 ```
@@ -138,5 +146,5 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 
 - **Fase 0, Fundação** (feita): estrutura, segurança, banco com RLS, CI, layout do PWA.
 - **Fase 1, MVP pessoal** (feita): CRUD de lançamentos e categorias (telas e API JSON), RLS ligado à sessão, dashboard e relatórios com jOOQ, vínculo do login Google com `app_user`. Pendente para depois: codegen do jOOQ a partir do schema.
-- **Fase 2, Automação**: importação OFX/CSV e captura rápida via Atalhos do iOS (webhook).
+- **Fase 2, Automação** (feita): importação OFX/CSV com preview e detecção de duplicatas, caixa de entrada com ações em lote, histórico de imports e webhook para os Atalhos do iOS. Fica para depois: categorização por IA, notificações push e sincronização direta com bancos.
 - **Fase 3, Comercial**: API REST pública, cadastro aberto, apps nativos.

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Resposta vazia (a navegação vem pelo header HX-Redirect) -->
+<th:block th:fragment="empty"></th:block>
+
+<!-- Resultado do upload: erro, preview com seleção, ou log de um import já fechado -->
+<section id="import-result" th:fragment="result" class="space-y-4">
+    <div th:if="${error}" role="alert" class="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+         th:text="${error}">Erro</div>
+
+    <th:block th:if="${batch != null}">
+        <div class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="truncate font-medium" th:text="${batch.fileName}">extrato.ofx</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400"
+                       th:text="|${batch.source} · ${@fmt.dateTime(batch.createdAt)}|">OFX · 26/10/2026 às 10:00</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium dark:bg-slate-800"
+                      th:text="${batch.status.name() == 'PREVIEW'} ? 'Aguardando confirmação'
+                               : (${batch.status.name() == 'IMPORTED'} ? |${batch.importedRows} na caixa de entrada| : 'Cancelado')">Aguardando confirmação</span>
+            </div>
+            <dl class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                <div class="rounded-2xl bg-brand-50 p-2 dark:bg-brand-700/20">
+                    <dt class="text-slate-600 dark:text-slate-300">Novas</dt>
+                    <dd class="text-lg font-semibold" th:text="${batch.newRows}">0</dd>
+                </div>
+                <div class="rounded-2xl bg-amber-50 p-2 dark:bg-amber-900/30">
+                    <dt class="text-slate-600 dark:text-slate-300">Duplicadas</dt>
+                    <dd class="text-lg font-semibold" th:text="${batch.duplicateRows}">0</dd>
+                </div>
+                <div class="rounded-2xl bg-red-50 p-2 dark:bg-red-950">
+                    <dt class="text-slate-600 dark:text-slate-300">Com erro</dt>
+                    <dd class="text-lg font-semibold" th:text="${batch.errorRows}">0</dd>
+                </div>
+            </dl>
+            <p th:if="${batch.inPreview() and batch.duplicateRows > 0}" class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                Duplicadas já existem com a mesma data, valor e descrição e ficam desmarcadas. Marque se forem lançamentos diferentes.
+            </p>
+        </div>
+
+        <div class="rounded-3xl bg-white px-4 py-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <label th:if="${batch.inPreview()}" class="flex items-center gap-3 border-b border-slate-100 py-3 text-sm font-medium dark:border-slate-800">
+                <input type="checkbox" data-check-all=".import-check" class="size-5 accent-brand-600">
+                Marcar todas
+            </label>
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                <li th:each="r : ${rows}" class="flex items-start gap-3 py-3">
+                    <input th:if="${batch.inPreview()}" type="checkbox" name="rowIds" th:value="${r.id}"
+                           class="import-check mt-1 size-5 shrink-0 accent-brand-600"
+                           th:checked="${r.selectedByDefault()}" th:disabled="${!r.selectable()}"
+                           th:aria-label="|Importar linha ${r.lineNo}|">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="min-w-0 truncate text-sm font-medium"
+                               th:text="${#strings.isEmpty(r.description)} ? '(sem descrição)' : ${r.description}">Supermercado</p>
+                            <p th:if="${r.amount != null}" class="money shrink-0 text-sm font-semibold"
+                               th:classappend="${r.type.name() == 'INCOME'} ? 'text-income dark:text-emerald-400'"
+                               th:text="${r.type.name() == 'INCOME'} ? |+ ${@fmt.money(r.amount)}| : |- ${@fmt.money(r.amount)}|">- R$ 10,00</p>
+                        </div>
+                        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span th:text="|Linha ${r.lineNo}|">Linha 1</span>
+                            <span th:if="${r.occurredOn != null}" th:text="${@fmt.date(r.occurredOn)}">10/10/2026</span>
+                            <span th:if="${r.selectable()}" th:text="${r.category != null} ? ${r.category.name} : 'Sem categoria'">Mercado</span>
+                            <span th:replace="~{fragments/automation :: rowStatus(${r.status})}"></span>
+                        </div>
+                        <p th:if="${r.message}" class="mt-1 text-xs"
+                           th:classappend="${r.status.name() == 'ERROR'} ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'"
+                           th:text="${r.message}">mensagem</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div th:if="${batch.inPreview()}" class="sticky bottom-24 z-10 flex gap-2">
+            <button type="button" class="flex-1 rounded-xl bg-brand-600 py-3 font-semibold text-white shadow-lg shadow-brand-600/20 active:bg-brand-700"
+                    th:hx-post="@{/imports/{id}/confirm(id=${batch.id})}" hx-include=".import-check:checked"
+                    hx-target="#import-result" hx-swap="outerHTML">
+                Enviar para a caixa de entrada
+            </button>
+            <button type="button" class="rounded-xl bg-slate-100 px-4 py-3 font-medium dark:bg-slate-800"
+                    th:hx-post="@{/imports/{id}/cancel(id=${batch.id})}" hx-target="#import-result" hx-swap="outerHTML">
+                Cancelar
+            </button>
+        </div>
+    </th:block>
+</section>
+
+</body>
+</html>
