@@ -3,6 +3,9 @@
 Uma imagem Docker, um Postgres e HTTPS na frente. Os caminhos abaixo vão do mais simples
 (Docker Compose num servidor) ao Kubernetes com deploy pelo GitHub Actions.
 
+**Na AWS (free tier):** EC2 + RDS + nginx com Let's Encrypt, criados pelo Terraform e com deploy automático a
+cada push na `main`. Passo a passo, custos e problemas comuns em [deploy-aws.md](deploy-aws.md).
+
 ## Requisitos
 
 - **PostgreSQL 16+** (testado com 18). O usuário da aplicação **não pode ser superusuário nem ter
@@ -103,6 +106,7 @@ O Postgres fica fora desses manifests: use um gerenciado (RDS, Cloud SQL, Neon, 
 | [`ci.yml`](../.github/workflows/ci.yml) | PR e push na `main` | `./mvnw verify` (testes com Testcontainers + cobertura) e build da imagem, sem publicar |
 | [`release.yml`](../.github/workflows/release.yml) | Push na `main` e tags `v*` | Testa de novo e publica `ghcr.io/luan-vega/self-control-financial` com as tags `<sha>`, `latest` e `<versão>` |
 | [`deploy.yml`](../.github/workflows/deploy.yml) | Manual (Actions → Deploy → Run workflow) | Aplica `deploy/k8s` com a imagem escolhida e espera o rollout |
+| [`deploy-aws.yml`](../.github/workflows/deploy-aws.yml) | Depois de cada Release da `main`, ou manual | Atualiza a EC2 via SSM e volta para a versão anterior se a nova não ficar saudável ([deploy-aws.md](deploy-aws.md)) |
 
 Para o deploy funcionar, crie o environment **production** no repositório (Settings → Environments),
 com o secret `KUBE_CONFIG` (kubeconfig em base64, de uma service account com acesso só ao namespace).

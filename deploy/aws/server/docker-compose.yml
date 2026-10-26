@@ -1,0 +1,40 @@
+# Produção numa EC2: só a app. O banco é o RDS e o nginx roda no host (TLS + proxy).
+# Arquivos em /opt/self-control; variáveis em /opt/self-control/.env (modelo em env.example).
+name: self-control
+
+services:
+  app:
+    image: ${IMAGE:-ghcr.io/luan-vega/self-control-financial}:${IMAGE_TAG:-latest}
+    container_name: self-control-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      # Além do console (JSON, lido pelo docker logs), grava em /var/log/self-control/app/app.log.
+      # O Spring Boot gira o arquivo sozinho (10 MB por arquivo, 7 arquivos).
+      LOGGING_FILE_NAME: /logs/app.log
+      LOGGING_STRUCTURED_FORMAT_FILE: ecs
+      # 1 GB de RAM na máquina: heap de ~60% do limite do container, GC serial (1 vCPU)
+      JAVA_TOOL_OPTIONS: >-
+        -XX:MaxRAMPercentage=60 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+        -Xss512k -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=192m
+    # Só o nginx do host chega na app; nada de porta 8080 aberta para fora
+    ports:
+      - "127.0.0.1:8080:8080"
+    mem_limit: 700m
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - /var/log/self-control/app:/logs
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # O HEALTHCHECK vem do Dockerfile (GET /actuator/health/liveness)

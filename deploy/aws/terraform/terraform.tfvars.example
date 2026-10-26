@@ -1,0 +1,19 @@
+# Copie para terraform.tfvars (que fica fora do git) e ajuste.
+
+region = "sa-east-1"
+
+# Contas criadas depois de 15/07/2025 (plano Free da AWS): use "t3.micro" e backup de 1 dia
+instance_type            = "t2.micro"
+db_backup_retention_days = 7
+
+# Seu IP para SSH (descubra com: curl -s https://checkip.amazonaws.com). Vazio = só SSM Session Manager.
+ssh_allowed_cidrs = ["203.0.113.4/32"]
+ssh_public_key    = "ssh-ed25519 AAAA... voce@notebook"
+
+# Domínio (opcional). Com route53_zone_id, o registro A é criado aqui; sem ele, crie no seu provedor de DNS.
+domain_name     = "financas.seudominio.com.br"
+route53_zone_id = ""
+
+# Alarmes e orçamento por e-mail
+alert_email        = "voce@exemplo.com"
+monthly_budget_usd = 5
