@@ -39,6 +39,7 @@ public record InboxEntry(
         return switch (source) {
             case OFX, CSV -> fileName != null ? fileName : source.name();
             case WEBHOOK -> "Atalho do iPhone";
+            case API -> "API";
         };
     }
 }

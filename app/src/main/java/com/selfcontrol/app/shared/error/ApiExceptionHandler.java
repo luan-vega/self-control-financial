@@ -24,6 +24,14 @@ class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    @ExceptionHandler(PlanLimitException.class)
+    ProblemDetail planLimit(PlanLimitException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PAYMENT_REQUIRED, e.getMessage());
+        problem.setProperty("limit", e.limit());
+        problem.setProperty("upgrade", "/billing");
+        return problem;
+    }
+
     @ExceptionHandler(InvalidInputException.class)
     ProblemDetail invalid(InvalidInputException e) {
         return withErrors(Map.of(e.field(), e.getMessage()));

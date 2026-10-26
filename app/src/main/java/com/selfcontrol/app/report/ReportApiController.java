@@ -15,9 +15,12 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
-/** API JSON do relatório. Valores em centavos (inteiros) na moeda padrão do usuário. */
+/**
+ * API JSON do relatório. Valores em centavos (inteiros) na moeda padrão do usuário. Também
+ * publicada em /api/v1/reports (API pública, com chave de API).
+ */
 @RestController
-@RequestMapping("/api/reports")
+@RequestMapping({"/api/reports", "/api/v1/reports"})
 class ReportApiController {
 
     record Totals(long incomeCents, long expensesCents, long netCents) {

@@ -21,8 +21,11 @@ class NavigationAdvice {
         if (path.startsWith("/categories")) {
             return "categories";
         }
-        if (path.startsWith("/inbox") || path.startsWith("/imports") || path.startsWith("/settings")) {
+        if (path.startsWith("/inbox") || path.startsWith("/imports") || path.startsWith("/settings/shortcut")) {
             return "inbox";
+        }
+        if (path.startsWith("/settings") || path.startsWith("/billing") || path.startsWith("/admin")) {
+            return "settings";
         }
         return "home";
     }

@@ -91,6 +91,16 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- API pública: documentação OpenAPI e cache de relatórios -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Operação -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

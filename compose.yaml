@@ -1,5 +1,8 @@
 # Ambiente local: `docker compose up -d db` e rode a app pela IDE/Maven,
-# ou `docker compose up --build` para subir tudo em containers.
+# ou `docker compose --profile app up --build` para subir tudo em containers.
+#
+# Sem Redis de propósito: rate limit e cache de relatórios ficam em memória, o que basta para uma
+# instância. Com várias réplicas, ver docs/deployment.md ("Escalando para mais de uma réplica").
 services:
   db:
     image: postgres:18-alpine
@@ -23,6 +26,7 @@ services:
 
   app:
     build: .
+    image: self-control-financial:local
     profiles: ["app"]
     depends_on:
       db:
@@ -31,10 +35,19 @@ services:
       DB_URL: jdbc:postgresql://db:5432/selfcontrol
       DB_USER: selfcontrol
       DB_PASSWORD: selfcontrol
+      # dev: cookie sem Secure, HTTP liberado, usuário dev e dados de exemplo.
+      # Para simular produção: SPRING_PROFILES_ACTIVE=prod e acesse por um proxy HTTPS.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       COOKIE_SECURE: "false"
-      SPRING_PROFILES_ACTIVE: dev
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-mock}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
     ports:
       - "8080:8080"
+    # O HEALTHCHECK vem do Dockerfile (GET /actuator/health/liveness)
 
 volumes:
   db-data:

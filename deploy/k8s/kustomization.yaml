@@ -1,0 +1,14 @@
+# kubectl apply -k deploy/k8s   (depois de criar o Secret, ver docs/deployment.md)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: self-control-financial
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - pdb.yaml
+images:
+  - name: ghcr.io/luan-vega/self-control-financial
+    newTag: latest   # o workflow de deploy troca pela tag do commit

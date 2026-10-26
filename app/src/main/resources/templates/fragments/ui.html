@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Cabeçalho das telas de configuração, com voltar -->
+<header th:fragment="back(title, subtitle, href)" class="pt-5 pb-4">
+    <a th:href="@{${href}}" class="-ml-1 inline-flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        Voltar
+    </a>
+    <h1 class="mt-2 text-xl font-semibold" th:text="${title}">Título</h1>
+    <p th:if="${subtitle}" class="text-sm text-slate-500 dark:text-slate-400" th:text="${subtitle}">Subtítulo</p>
+</header>
+
+<!-- Avatar: foto enviada, foto do Google ou iniciais -->
+<span th:fragment="avatar(profile, size)" class="grid shrink-0 place-items-center overflow-hidden rounded-full bg-brand-600 font-semibold text-white"
+      th:classappend="${size}">
+    <img th:if="${profile.hasAvatar}" th:src="@{/settings/profile/avatar}" alt="" class="size-full object-cover">
+    <img th:if="${!profile.hasAvatar and profile.avatarUrl != null}" th:src="${profile.avatarUrl}" alt="" referrerpolicy="no-referrer" class="size-full object-cover">
+    <span th:if="${!profile.hasAvatar and profile.avatarUrl == null}" th:text="${profile.initials()}" aria-hidden="true">AS</span>
+</span>
+
+<!-- Selo do plano -->
+<span th:fragment="plan(subscription)" class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      th:classappend="${subscription.pro()} ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'"
+      th:text="${subscription.plan().label()}">Free</span>
+
+</body>
+</html>

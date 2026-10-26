@@ -1,18 +1,15 @@
 package com.selfcontrol.app.webhook;
 
+import com.selfcontrol.app.shared.audit.AuditLog;
+import com.selfcontrol.app.shared.security.Secrets;
 import com.selfcontrol.app.shared.security.UserContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,21 +27,19 @@ public class WebhookTokenService {
 
     static final String PREFIX = "scf_";
 
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     private final JdbcClient jdbc;
     private final UserContext users;
+    private final AuditLog audit;
 
-    WebhookTokenService(JdbcClient jdbc, UserContext users) {
+    WebhookTokenService(JdbcClient jdbc, UserContext users, AuditLog audit) {
         this.jdbc = jdbc;
         this.users = users;
+        this.audit = audit;
     }
 
     /** Gera um token novo para o usuário logado e devolve o valor completo (só aparece esta vez). */
     public String rotate() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        String token = PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        String token = Secrets.random(PREFIX);
         jdbc.sql("""
                         INSERT INTO webhook_token (user_id, token_hash, token_hint)
                         VALUES (:userId, :hash, :hint)
@@ -56,6 +51,7 @@ public class WebhookTokenService {
                 .param("hash", hash(token))
                 .param("hint", token.substring(token.length() - 4))
                 .update();
+        audit.record("webhook_token.rotated", "webhook_token", null, Map.of());
         return token;
     }
 
@@ -71,12 +67,14 @@ public class WebhookTokenService {
     }
 
     public void revoke() {
-        jdbc.sql("DELETE FROM webhook_token WHERE user_id = app_current_user_id()").update();
+        if (jdbc.sql("DELETE FROM webhook_token WHERE user_id = app_current_user_id()").update() > 0) {
+            audit.record("webhook_token.revoked", "webhook_token", null, Map.of());
+        }
     }
 
     /**
      * Descobre de quem é o token (antes de existir usuário no contexto) e marca o uso.
-     * Vazio se o token não existe ou foi revogado.
+     * Vazio se o token não existe, foi revogado ou a conta está desativada.
      */
     public Optional<Owner> authenticate(String token) {
         if (token == null || !token.startsWith(PREFIX) || token.length() > 100) {
@@ -85,7 +83,7 @@ public class WebhookTokenService {
         return jdbc.sql("""
                         UPDATE webhook_token t SET last_used_at = now()
                           FROM app_user u
-                         WHERE t.token_hash = :hash AND u.id = t.user_id
+                         WHERE t.token_hash = :hash AND u.id = t.user_id AND u.active
                         RETURNING u.id, u.email
                         """)
                 .param("hash", hash(token))
@@ -94,12 +92,7 @@ public class WebhookTokenService {
     }
 
     static String hash(String token) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        return Secrets.sha256(token);
     }
 
     private static Instant instant(Timestamp timestamp) {

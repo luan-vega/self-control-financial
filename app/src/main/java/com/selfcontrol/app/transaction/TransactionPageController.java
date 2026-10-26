@@ -2,6 +2,7 @@ package com.selfcontrol.app.transaction;
 
 import com.selfcontrol.app.category.CategoryClient;
 import com.selfcontrol.app.shared.error.InvalidInputException;
+import com.selfcontrol.app.shared.error.PlanLimitException;
 import com.selfcontrol.app.shared.web.Formats;
 import com.selfcontrol.domain.report.Period;
 import com.selfcontrol.domain.transaction.Balance;
@@ -138,6 +139,8 @@ class TransactionPageController {
                 return "transactions/form :: saved";
             } catch (InvalidInputException e) {
                 errors.rejectValue(e.field(), "invalid", e.getMessage());
+            } catch (PlanLimitException e) {
+                errors.reject("plan", e.getMessage());
             }
         }
         return modal(model, form, id);

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Perfil</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header th:replace="~{fragments/ui :: back('Perfil', null, '/settings')}"></header>
+
+    <div th:if="${message}" role="status" class="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-700 dark:bg-brand-700/20 dark:text-emerald-200"
+         th:text="${message}">Salvo</div>
+
+    <div class="space-y-4">
+        <!-- Foto -->
+        <section class="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <span th:replace="~{fragments/ui :: avatar(${profile}, 'size-16 text-xl')}"></span>
+            <div class="min-w-0 flex-1 space-y-2">
+                <form th:action="@{/settings/profile/avatar}" method="post" enctype="multipart/form-data" class="flex flex-wrap items-center gap-2">
+                    <label class="cursor-pointer rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium dark:bg-slate-800">
+                        Escolher foto
+                        <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" class="sr-only" data-auto-submit>
+                    </label>
+                    <noscript><button type="submit" class="rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white">Enviar</button></noscript>
+                </form>
+                <form th:if="${profile.hasAvatar}" th:action="@{/settings/profile/avatar/delete}" method="post">
+                    <button type="submit" class="text-sm text-red-600 dark:text-red-400">Remover foto</button>
+                </form>
+                <p class="text-xs text-slate-500 dark:text-slate-400">PNG, JPEG ou WebP, até 512 KB.</p>
+                <p th:if="${avatarError}" th:text="${avatarError}" class="text-sm text-red-600 dark:text-red-400">erro</p>
+            </div>
+        </section>
+
+        <!-- Dados -->
+        <form th:action="@{/settings/profile}" th:object="${form}" method="post" novalidate
+              class="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <label class="block">
+                <span class="text-sm font-medium">Nome</span>
+                <input type="text" th:field="*{name}" maxlength="80" autocomplete="name"
+                       class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-950"
+                       th:classappend="${#fields.hasErrors('name')} ? 'border-red-500!'">
+                <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            </label>
+            <div>
+                <span class="text-sm font-medium">E-mail</span>
+                <p class="mt-1 flex items-center gap-2 text-base">
+                    <span class="min-w-0 truncate" th:text="${profile.email}">email</span>
+                    <span th:if="${profile.emailVerified}" class="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 dark:bg-brand-700/30 dark:text-emerald-300">confirmado</span>
+                    <span th:unless="${profile.emailVerified}" class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">não confirmado</span>
+                </p>
+            </div>
+            <label class="block">
+                <span class="text-sm font-medium">Moeda padrão</span>
+                <select th:field="*{currency}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-950">
+                    <option th:each="c : ${currencies}" th:value="${c}" th:text="${c}">BRL</option>
+                </select>
+                <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Usada nos relatórios e nos lançamentos novos.</span>
+                <span th:if="${#fields.hasErrors('currency')}" th:errors="*{currency}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            </label>
+            <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white active:bg-brand-700">Salvar</button>
+        </form>
+
+        <form th:unless="${profile.emailVerified}" th:action="@{/settings/profile/verification}" method="post"
+              class="rounded-3xl bg-amber-50 p-5 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+            <p>Confirme seu e-mail para garantir que você consegue recuperar a conta.</p>
+            <button type="submit" class="mt-2 font-semibold underline">Reenviar link de confirmação</button>
+        </form>
+
+        <!-- Senha -->
+        <form th:action="@{/settings/password}" method="post"
+              class="space-y-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium" th:text="${profile.hasPassword} ? 'Trocar senha' : 'Criar senha'">Trocar senha</h2>
+            <p th:unless="${profile.hasPassword}" class="text-sm text-slate-500 dark:text-slate-400">Você entra com o Google. Crie uma senha para entrar também com e-mail.</p>
+            <label th:if="${profile.hasPassword}" class="block">
+                <span class="text-sm font-medium">Senha atual</span>
+                <input type="password" name="currentPassword" autocomplete="current-password"
+                       class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-950">
+            </label>
+            <label class="block">
+                <span class="text-sm font-medium">Nova senha</span>
+                <input type="password" name="newPassword" autocomplete="new-password" minlength="8" maxlength="128"
+                       class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-950">
+            </label>
+            <p th:if="${passwordError}" th:text="${passwordError}" class="text-sm text-red-600 dark:text-red-400">erro</p>
+            <button type="submit" class="w-full rounded-xl bg-slate-100 py-3 font-semibold dark:bg-slate-800">Salvar senha</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

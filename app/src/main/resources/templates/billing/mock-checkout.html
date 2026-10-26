@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Pagamento (simulado)</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex flex-1 flex-col justify-center px-6 safe-top">
+    <div class="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+        Checkout simulado: nenhum cartão é cobrado. Em produção, esta etapa acontece no Stripe.
+    </div>
+    <h1 class="mt-6 text-2xl font-semibold">Self Control Pro</h1>
+    <p class="mt-1 text-slate-500 dark:text-slate-400" th:text="|${proPrice}, renovação mensal|">R$ 9,90/mês</p>
+
+    <div class="mt-6 space-y-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <p class="text-sm font-medium">Cartão de teste</p>
+        <p class="rounded-xl border border-slate-300 px-4 py-3 font-mono text-slate-500 dark:border-slate-700">4242 4242 4242 4242</p>
+        <form th:action="@{/billing/mock-checkout}" method="post">
+            <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white active:bg-brand-700"
+                    th:text="|Pagar ${proPrice}|">Pagar</button>
+        </form>
+        <a th:href="@{/billing(canceled)}" class="block text-center text-sm text-slate-500">Cancelar</a>
+    </div>
+</main>
+</body>
+</html>

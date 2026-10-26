@@ -18,6 +18,7 @@
     <section id="inbox" th:fragment="inbox" class="space-y-4">
         <div th:if="${message}" role="status" class="rounded-xl bg-brand-50 p-3 text-sm text-brand-700 dark:bg-brand-700/20 dark:text-emerald-200"
              th:text="${message}">Mensagem</div>
+        <a th:if="${planLimit}" th:href="@{/billing}" class="-mt-2 block text-sm font-semibold text-brand-700 underline dark:text-emerald-300">Ver planos</a>
 
         <div th:if="${#lists.isEmpty(entries)}" class="rounded-3xl bg-white p-8 text-center text-sm shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
             <p class="font-medium">Nada pendente</p>

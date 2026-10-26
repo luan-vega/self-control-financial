@@ -11,7 +11,7 @@
     <header class="flex items-center justify-between pt-6 pb-4">
         <div class="min-w-0">
             <p class="text-sm text-slate-500 dark:text-slate-400">Olá,</p>
-            <h1 class="truncate text-xl font-semibold" th:text="${#authentication.name}">usuário</h1>
+            <h1 class="truncate text-xl font-semibold" th:text="${profile.name}">usuário</h1>
         </div>
         <div class="flex items-center gap-1">
         <a th:href="@{/inbox}" class="relative grid size-10 place-items-center rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -20,14 +20,17 @@
             <span th:if="${inboxCount > 0}" class="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-expense px-1 text-[11px] font-semibold text-white"
                   th:text="${inboxCount > 99} ? '99+' : ${inboxCount}">3</span>
         </a>
-        <form th:action="@{/logout}" method="post">
-            <button type="submit" class="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800">
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                Sair
-            </button>
-        </form>
+        <a th:href="@{/settings}" class="rounded-full p-1 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Configurações e conta">
+            <span th:replace="~{fragments/ui :: avatar(${profile}, 'size-9 text-sm')}"></span>
+        </a>
         </div>
     </header>
+
+    <a th:if="${usage != null}" th:href="@{/billing}"
+       class="mb-4 block rounded-2xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+        <span th:text="|Você usou ${usage.used()} de ${usage.limit().getAsInt()} lançamentos do plano Free este mês.|">Uso</span>
+        <strong class="underline">Conheça o Pro</strong>
+    </a>
 
     <section id="summary" th:fragment="summary" class="space-y-5">
         <!-- Troca de mês via HTMX: o servidor devolve só este fragmento -->

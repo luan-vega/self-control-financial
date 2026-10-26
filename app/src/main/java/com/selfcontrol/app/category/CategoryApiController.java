@@ -23,9 +23,12 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.util.List;
 import java.util.UUID;
 
-/** API JSON de categorias (sessão + CSRF, mesma autenticação das telas). */
+/**
+ * API JSON de categorias. Em /api/categories usa a sessão + CSRF (o próprio app web); em
+ * /api/v1/categories é a API pública, com chave de API (ver SecurityConfig).
+ */
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping({"/api/categories", "/api/v1/categories"})
 class CategoryApiController {
 
     record CategoryRequest(

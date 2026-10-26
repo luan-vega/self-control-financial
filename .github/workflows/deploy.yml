@@ -1,0 +1,39 @@
+name: Deploy
+
+# Deploy manual no Kubernetes (Actions → Deploy → Run workflow), depois que o Release publicou a imagem.
+# Precisa do secret KUBE_CONFIG (kubeconfig em base64) no environment "production" do repositório,
+# e do Secret da app já criado no cluster (docs/deployment.md).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da imagem (sha completo do commit ou versão). Vazio = commit atual da main."
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TAG: ${{ inputs.tag || github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-kubectl@v4
+      - name: Configura o acesso ao cluster
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+      - name: Aplica os manifests e troca a imagem
+        run: |
+          sed -i "s|newTag: .*|newTag: \"$TAG\"|" deploy/k8s/kustomization.yaml
+          kubectl apply -k deploy/k8s
+          kubectl -n self-control-financial rollout status deployment/self-control-financial --timeout=5m

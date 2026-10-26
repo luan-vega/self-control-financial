@@ -1,5 +1,6 @@
 package com.selfcontrol.app.report;
 
+import com.selfcontrol.app.shared.security.CurrentUser;
 import com.selfcontrol.app.shared.security.UserContext;
 import com.selfcontrol.domain.money.Money;
 import com.selfcontrol.domain.report.CategorySum;
@@ -32,7 +33,8 @@ import static org.jooq.impl.DSL.year;
 
 /**
  * Agregações com jOOQ (SQL tipado, sem codegen por enquanto). O RLS continua valendo: as
- * consultas rodam na transação que já tem o usuário no contexto.
+ * consultas rodam na transação que já tem o usuário no contexto. Os resultados ficam no
+ * {@link ReportCache}, por usuário, até o próximo lançamento ou mudança de categoria.
  */
 @Service
 @Transactional(readOnly = true)
@@ -52,15 +54,22 @@ class ReportService implements ReportClient {
 
     private final DSLContext dsl;
     private final UserContext users;
+    private final ReportCache cache;
 
-    ReportService(DSLContext dsl, UserContext users) {
+    ReportService(DSLContext dsl, UserContext users, ReportCache cache) {
         this.dsl = dsl;
         this.users = users;
+        this.cache = cache;
     }
 
     @Override
     public Report report(Period period, UUID categoryId) {
-        Currency currency = users.current().defaultCurrency();
+        CurrentUser user = users.current();
+        return cache.get(new ReportCache.Key(user.id(), "report", user.defaultCurrency(), period, categoryId),
+                () -> query(period, categoryId, user.defaultCurrency()));
+    }
+
+    private Report query(Period period, UUID categoryId, Currency currency) {
         Condition where = TX_CURRENCY.eq(currency.getCurrencyCode())
                 .and(TX_DATE.between(period.from(), period.to()))
                 .and(categoryId == null ? noCondition() : TX_CATEGORY.eq(categoryId));
@@ -91,7 +100,12 @@ class ReportService implements ReportClient {
 
     @Override
     public Balance allTimeBalance() {
-        Currency currency = users.current().defaultCurrency();
+        CurrentUser user = users.current();
+        return cache.get(new ReportCache.Key(user.id(), "balance", user.defaultCurrency()),
+                () -> balance(user.defaultCurrency()));
+    }
+
+    private Balance balance(Currency currency) {
         Money zero = Money.zero(currency);
         Money income = zero;
         Money expenses = zero;
