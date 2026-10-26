@@ -1,6 +1,9 @@
 package com.selfcontrol.app.transaction;
 
+import com.selfcontrol.app.billing.BillingClient;
 import com.selfcontrol.app.category.CategoryClient;
+import com.selfcontrol.app.report.ReportCache;
+import com.selfcontrol.app.shared.audit.AuditLog;
 import com.selfcontrol.app.shared.error.InvalidInputException;
 import com.selfcontrol.app.shared.error.NotFoundException;
 import com.selfcontrol.app.shared.security.CurrentUser;
@@ -32,13 +35,20 @@ class TransactionService implements TransactionClient {
     private final CategoryClient categories;
     private final JdbcAggregateTemplate aggregates;
     private final UserContext users;
+    private final BillingClient billing;
+    private final ReportCache reportCache;
+    private final AuditLog audit;
 
     TransactionService(TransactionRepository transactions, CategoryClient categories,
-                       JdbcAggregateTemplate aggregates, UserContext users) {
+                       JdbcAggregateTemplate aggregates, UserContext users, BillingClient billing,
+                       ReportCache reportCache, AuditLog audit) {
         this.transactions = transactions;
         this.categories = categories;
         this.aggregates = aggregates;
         this.users = users;
+        this.billing = billing;
+        this.reportCache = reportCache;
+        this.audit = audit;
     }
 
     @Override
@@ -67,7 +77,10 @@ class TransactionService implements TransactionClient {
     public Transaction create(TransactionCommand command) {
         CurrentUser user = users.current();
         Transaction transaction = build(UUID.randomUUID(), user, command);
+        // O limite do plano Free vale para todo lançamento novo, inclusive os confirmados da caixa de entrada.
+        billing.checkCanCreateTransactions(1);
         aggregates.insert(TransactionRow.from(transaction));
+        changed(transaction, "transaction.created");
         return transaction;
     }
 
@@ -76,13 +89,22 @@ class TransactionService implements TransactionClient {
         get(id);
         Transaction transaction = build(id, users.current(), command);
         transactions.save(TransactionRow.from(transaction));
+        changed(transaction, "transaction.updated");
         return transaction;
     }
 
     @Override
     public void delete(UUID id) {
-        get(id);
+        Transaction transaction = get(id);
         transactions.deleteById(id);
+        changed(transaction, "transaction.deleted");
+    }
+
+    private void changed(Transaction t, String action) {
+        reportCache.invalidate(t.userId());
+        audit.record(action, "transaction", t.id(), Map.of("type", t.type().name(),
+                "amountCents", t.amount().minorUnits(), "currency", t.amount().currency().getCurrencyCode(),
+                "occurredOn", t.occurredOn().toString()));
     }
 
     private Transaction build(UUID id, CurrentUser user, TransactionCommand command) {

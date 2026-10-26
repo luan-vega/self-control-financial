@@ -28,9 +28,12 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
-/** API JSON de lançamentos (sessão + CSRF, mesma autenticação das telas). */
+/**
+ * API JSON de lançamentos. Em /api/transactions usa a sessão + CSRF (o próprio app web); em
+ * /api/v1/transactions é a API pública, com chave de API (ver SecurityConfig).
+ */
 @RestController
-@RequestMapping("/api/transactions")
+@RequestMapping({"/api/transactions", "/api/v1/transactions"})
 class TransactionApiController {
 
     record TransactionRequest(

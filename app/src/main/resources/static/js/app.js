@@ -7,6 +7,14 @@ document.addEventListener("htmx:configRequest", (event) => {
     }
 });
 
+// Botões com data-reload-on-success recarregam a página quando a requisição HTMX dá certo
+// (no lugar de hx-on, que exigiria 'unsafe-eval' na Content-Security-Policy).
+document.addEventListener("htmx:afterRequest", (event) => {
+    if (event.detail.successful && event.detail.elt.hasAttribute("data-reload-on-success")) {
+        window.location.reload();
+    }
+});
+
 // Modal: fecha no X, no fundo escuro ou com Esc. O conteúdo vem do servidor via HTMX.
 function closeModal() {
     const modal = document.getElementById("modal");
@@ -101,5 +109,13 @@ document.addEventListener("click", (event) => {
         });
     } else if (field) {
         field.select();
+    }
+});
+
+// Escolher o arquivo já envia o formulário (foto do perfil).
+document.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-auto-submit]");
+    if (input && input.files && input.files.length > 0) {
+        input.form.requestSubmit();
     }
 });

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Plano e cobrança</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header th:replace="~{fragments/ui :: back('Plano e cobrança', null, '/settings')}"></header>
+
+    <div th:if="${param.upgraded != null and subscription.pro()}" role="status" class="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-700 dark:bg-brand-700/20 dark:text-emerald-200">
+        Bem-vindo ao Pro! Seus lançamentos agora não têm limite.
+    </div>
+    <div th:if="${param.upgraded != null and !subscription.pro()}" role="status" class="mb-4 rounded-xl bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        Pagamento recebido. Seu plano será atualizado em instantes; recarregue a página.
+    </div>
+    <div th:if="${param.canceled}" role="status" class="mb-4 rounded-xl bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        Pagamento não concluído. Nada foi cobrado.
+    </div>
+    <div th:if="${param.downgraded}" role="status" class="mb-4 rounded-xl bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        Assinatura cancelada. Sua conta voltou ao plano Free, sem perder dados.
+    </div>
+    <div th:if="${subscription.pastDue()}" role="alert" class="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+        Não conseguimos cobrar a última fatura. Atualize o cartão para manter o Pro.
+    </div>
+
+    <div class="space-y-4">
+        <!-- Plano atual e uso do mês -->
+        <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="text-sm text-slate-500 dark:text-slate-400">Plano atual</p>
+            <p class="mt-1 flex items-center gap-2 text-2xl font-semibold">
+                <span th:text="${subscription.plan().label()}">Free</span>
+                <span th:if="${subscription.cancelAtPeriodEnd}" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">cancelado</span>
+            </p>
+            <p th:if="${subscription.pro() and subscription.currentPeriodEnd != null}" class="text-sm text-slate-500 dark:text-slate-400"
+               th:text="${subscription.cancelAtPeriodEnd} ? |Vale até ${@fmt.dateTime(subscription.currentPeriodEnd)}| : |Renova em ${@fmt.dateTime(subscription.currentPeriodEnd)}|">Renova em</p>
+
+            <div class="mt-5">
+                <div class="flex items-baseline justify-between text-sm">
+                    <span class="font-medium">Lançamentos neste mês</span>
+                    <span class="money" th:text="${usage.unlimited()} ? ${usage.used()} : |${usage.used()} de ${usage.limit().getAsInt()}|">12 de 100</span>
+                </div>
+                <div th:unless="${usage.unlimited()}" class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                     role="progressbar" th:attr="aria-valuenow=${usage.percent()}" aria-valuemin="0" aria-valuemax="100" aria-label="Uso do mês">
+                    <div class="h-full rounded-full" th:classappend="${usage.percent() >= 90} ? 'bg-expense' : 'bg-brand-600'"
+                         th:style="|width: ${usage.percent()}%|"></div>
+                </div>
+                <p th:if="${usage.unlimited()}" class="mt-1 text-xs text-slate-500 dark:text-slate-400">Sem limite no Pro.</p>
+            </div>
+        </section>
+
+        <!-- Upgrade -->
+        <section th:unless="${subscription.pro()}" class="rounded-3xl bg-brand-700 p-5 text-white shadow-lg shadow-brand-700/20">
+            <p class="text-sm text-white/80">Self Control Pro</p>
+            <p class="mt-1 text-2xl font-semibold" th:text="${proPrice}">R$ 9,90/mês</p>
+            <ul class="mt-3 space-y-1.5 text-sm">
+                <li class="flex gap-2"><span aria-hidden="true">✓</span> Lançamentos ilimitados</li>
+                <li class="flex gap-2"><span aria-hidden="true">✓</span> Importação, caixa de entrada e Atalhos sem limite mensal</li>
+                <li class="flex gap-2"><span aria-hidden="true">✓</span> Cancele quando quiser, sem perder dados</li>
+            </ul>
+            <form th:action="@{/billing/checkout}" method="post" class="mt-5">
+                <button type="submit" class="w-full rounded-xl bg-white py-3 font-semibold text-brand-700 active:bg-brand-50">Assinar o Pro</button>
+            </form>
+        </section>
+
+        <!-- Gerenciar -->
+        <section th:if="${subscription.pro()}" class="space-y-2 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium">Assinatura</h2>
+            <form th:unless="${mock}" th:action="@{/billing/portal}" method="post">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Troque o cartão, veja faturas ou cancele no portal seguro do Stripe.</p>
+                <button type="submit" class="mt-3 w-full rounded-xl bg-slate-100 py-3 font-semibold dark:bg-slate-800">Gerenciar assinatura</button>
+            </form>
+            <form th:if="${mock}" th:action="@{/billing/mock-cancel}" method="post">
+                <p class="text-sm text-slate-500 dark:text-slate-400">Cobrança simulada (ambiente de teste): cancelar volta para o Free na hora.</p>
+                <button type="submit" class="mt-3 w-full rounded-xl bg-slate-100 py-3 font-semibold text-red-600 dark:bg-slate-800 dark:text-red-400">Cancelar assinatura</button>
+            </form>
+        </section>
+
+        <p th:if="${mock}" class="text-center text-xs text-slate-500 dark:text-slate-400">Ambiente de teste: nenhum pagamento real é feito.</p>
+    </div>
+</main>
+</body>
+</html>

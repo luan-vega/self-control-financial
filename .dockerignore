@@ -3,3 +3,7 @@
 .git/
 .idea/
 .vscode/
+.github/
+docs/
+deploy/
+*.md

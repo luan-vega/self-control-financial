@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Confirmação de e-mail</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex flex-1 flex-col justify-center px-6 text-center safe-top">
+    <div th:if="${verified}">
+        <div class="mx-auto grid size-14 place-items-center rounded-full bg-brand-50 text-brand-700 dark:bg-brand-700/30 dark:text-emerald-300">
+            <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h1 class="mt-4 text-xl font-semibold">E-mail confirmado</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Tudo certo com a sua conta.</p>
+    </div>
+    <div th:unless="${verified}">
+        <h1 class="text-xl font-semibold">Link inválido ou vencido</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Entre na sua conta e peça um novo link em Configurações → Perfil.</p>
+    </div>
+    <a th:href="@{/}" class="mx-auto mt-6 inline-block rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white">Ir para o app</a>
+</main>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# TLS termina aqui (cert-manager + Let's Encrypt). A app confia no X-Forwarded-Proto e
+# redireciona HTTP para HTTPS por conta própria (app.security.require-https).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: self-control-financial
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 6m   # upload de OFX/CSV (5 MB)
+    # Limite grosso por IP na borda, antes de chegar à app (DDoS). O fino por usuário fica na app.
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [financas.exemplo.com]
+      secretName: self-control-financial-tls
+  rules:
+    - host: financas.exemplo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: self-control-financial
+                port:
+                  name: http

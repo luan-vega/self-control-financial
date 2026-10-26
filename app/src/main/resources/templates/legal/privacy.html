@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Política de Privacidade</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-5 pb-28 safe-top">
+    <article class="space-y-4 pt-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+        <header>
+            <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">Política de Privacidade</h1>
+            <p class="text-xs text-slate-500" th:text="|Versão ${version}|">Versão</p>
+        </header>
+
+        <p>Esta política explica quais dados pessoais o Self Control Financial trata, por quê e quais são os seus direitos,
+            conforme a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">1. Dados que tratamos</h2>
+        <ul class="list-disc space-y-1 pl-5">
+            <li><strong>Conta:</strong> nome, e-mail, senha (guardada só como hash Argon2id, nunca em texto), moeda padrão e foto, se você enviar uma. No login com Google, recebemos nome, e-mail e foto da conta Google.</li>
+            <li><strong>Dados financeiros:</strong> lançamentos, categorias, extratos importados e itens da caixa de entrada que você cadastra.</li>
+            <li><strong>Assinatura:</strong> plano, situação e identificadores do processador de pagamento (Stripe). Não recebemos nem guardamos o número do cartão.</li>
+            <li><strong>Segurança:</strong> registros de acesso e uma trilha de auditoria (data, ação, endereço IP e navegador) para proteger sua conta e investigar abusos.</li>
+        </ul>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">2. Para que usamos e com qual base legal</h2>
+        <ul class="list-disc space-y-1 pl-5">
+            <li>Prestar o serviço que você contratou (execução de contrato, art. 7º, V).</li>
+            <li>Cobrar a assinatura Pro (execução de contrato).</li>
+            <li>Segurança, prevenção a fraude e registros de acesso (legítimo interesse e obrigação legal, Marco Civil da Internet, art. 15).</li>
+            <li>E-mails transacionais, como confirmação de e-mail e troca de senha. Não enviamos propaganda sem o seu consentimento.</li>
+        </ul>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">3. Compartilhamento</h2>
+        <p>Não vendemos seus dados. Compartilhamos apenas com operadores necessários ao serviço: hospedagem e banco de dados,
+            envio de e-mail, Stripe (pagamentos) e Google (se você usar o login com Google), cada um sob contrato e só
+            para essa finalidade, ou quando exigido por lei ou ordem judicial.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">4. Segurança</h2>
+        <p>Conexão sempre por HTTPS, senhas com hash forte, tokens e chaves de API guardados apenas como hash, e isolamento
+            dos dados de cada usuário no próprio banco (Row-Level Security). Nenhum sistema é 100% seguro; se houver um
+            incidente relevante, avisaremos você e a ANPD.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">5. Por quanto tempo</h2>
+        <p>Enquanto sua conta existir. Quando você pede a exclusão da conta, apagamos os dados financeiros e de perfil; registros de acesso
+            ficam por 6 meses (Marco Civil) e dados de cobrança pelo prazo exigido pela legislação fiscal.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">6. Seus direitos</h2>
+        <p>Você pode pedir confirmação e acesso aos dados, correção, portabilidade (a API permite levar seus
+            dados), anonimização ou exclusão, informação sobre compartilhamentos e revogação de consentimento (art. 18 da LGPD).
+            Faça o pedido pelo e-mail de suporte informado no app; respondemos em até 15 dias.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">7. Cookies</h2>
+        <p>Usamos só o cookie de sessão necessário para manter você logado. Não usamos cookies de publicidade nem de rastreamento.</p>
+    </article>
+    <p class="mt-8 text-center text-sm"><a th:href="@{/}" class="font-semibold text-brand-700 dark:text-emerald-300">Voltar</a></p>
+</main>
+</body>
+</html>

@@ -2,6 +2,7 @@ package com.selfcontrol.app.inbox;
 
 import com.selfcontrol.app.category.CategoryClient;
 import com.selfcontrol.app.shared.error.InvalidInputException;
+import com.selfcontrol.app.shared.error.PlanLimitException;
 import com.selfcontrol.app.shared.web.Formats;
 import com.selfcontrol.domain.category.Category;
 import com.selfcontrol.domain.transaction.TransactionType;
@@ -54,7 +55,15 @@ class InboxPageController {
 
     @PostMapping("/confirm")
     String confirm(@RequestParam(name = "ids", required = false) List<UUID> ids, Model model) {
-        InboxClient.BulkResult result = inbox.confirm(ids);
+        InboxClient.BulkResult result;
+        try {
+            result = inbox.confirm(ids);
+        } catch (PlanLimitException e) {
+            // Nada foi confirmado (tudo ou nada); os itens continuam na caixa.
+            list(model, e.getMessage());
+            model.addAttribute("planLimit", true);
+            return LIST;
+        }
         String message;
         if (result.confirmed() == 0 && result.skipped() == 0) {
             message = "Selecione os lançamentos que quer confirmar.";

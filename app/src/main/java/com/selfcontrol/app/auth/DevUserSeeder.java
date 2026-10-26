@@ -1,5 +1,6 @@
 package com.selfcontrol.app.auth;
 
+import com.selfcontrol.app.account.Legal;
 import com.selfcontrol.app.category.CategoryClient;
 import com.selfcontrol.app.shared.security.RunAs;
 import com.selfcontrol.app.transaction.TransactionClient;
@@ -27,8 +28,9 @@ import static com.selfcontrol.domain.transaction.TransactionType.EXPENSE;
 import static com.selfcontrol.domain.transaction.TransactionType.INCOME;
 
 /**
- * Cria um usuário local para desenvolvimento, com categorias sugeridas e alguns lançamentos
- * de exemplo no mês atual e no anterior. Só roda com o perfil "dev".
+ * Cria um usuário local para desenvolvimento (admin, e-mail confirmado, termos aceitos), com
+ * categorias sugeridas e alguns lançamentos de exemplo no mês atual e no anterior. Só roda com o
+ * perfil "dev".
  */
 @Component
 @Profile("dev")
@@ -68,12 +70,14 @@ class DevUserSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         int created = jdbc.sql("""
-                        INSERT INTO app_user (email, display_name, password_hash)
-                        VALUES (:email, 'Dev', :hash)
+                        INSERT INTO app_user (email, display_name, password_hash, role, email_verified_at,
+                                              terms_accepted_at, terms_version)
+                        VALUES (:email, 'Dev', :hash, 'ADMIN', now(), now(), :terms)
                         ON CONFLICT DO NOTHING
                         """)
                 .param("email", EMAIL)
                 .param("hash", passwordEncoder.encode(PASSWORD))
+                .param("terms", Legal.VERSION)
                 .update();
         if (created == 0) {
             return;

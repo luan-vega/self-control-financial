@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Criar conta</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex flex-1 flex-col justify-center px-6 py-10 safe-top">
+    <div class="mb-8 text-center">
+        <img th:src="@{/icons/icon.svg}" alt="" class="mx-auto size-14 rounded-2xl shadow-lg shadow-brand-600/30">
+        <h1 class="mt-4 text-2xl font-semibold">Criar conta</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Grátis até 100 lançamentos por mês.</p>
+    </div>
+
+    <form th:action="@{/register}" th:object="${form}" method="post" class="space-y-4" novalidate>
+        <label class="block">
+            <span class="text-sm font-medium">Nome</span>
+            <input type="text" th:field="*{name}" autocomplete="name" maxlength="80" required autofocus
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900"
+                   th:classappend="${#fields.hasErrors('name')} ? 'border-red-500!'">
+            <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+        </label>
+        <label class="block">
+            <span class="text-sm font-medium">E-mail</span>
+            <input type="email" th:field="*{email}" autocomplete="email" required
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900"
+                   th:classappend="${#fields.hasErrors('email')} ? 'border-red-500!'">
+            <span th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+        </label>
+        <label class="block">
+            <span class="text-sm font-medium">Senha</span>
+            <input type="password" th:field="*{password}" autocomplete="new-password" minlength="8" maxlength="128" required
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900"
+                   th:classappend="${#fields.hasErrors('password')} ? 'border-red-500!'">
+            <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+            <span th:unless="${#fields.hasErrors('password')}" class="mt-1 block text-xs text-slate-500 dark:text-slate-400">Pelo menos 8 caracteres.</span>
+        </label>
+        <label class="block">
+            <span class="text-sm font-medium">Moeda principal</span>
+            <select th:field="*{currency}"
+                    class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base dark:border-slate-700 dark:bg-slate-900">
+                <option th:each="c : ${currencies}" th:value="${c}" th:text="${c}">BRL</option>
+            </select>
+            <span th:if="${#fields.hasErrors('currency')}" th:errors="*{currency}" class="mt-1 block text-sm text-red-600 dark:text-red-400">erro</span>
+        </label>
+        <label class="flex items-start gap-3 text-sm">
+            <input type="checkbox" th:field="*{acceptTerms}" class="mt-0.5 size-5 shrink-0 accent-brand-600">
+            <span>Li e aceito os <a th:href="@{/legal/terms}" target="_blank" class="font-medium text-brand-700 underline dark:text-emerald-300">Termos de Uso</a>
+                e a <a th:href="@{/legal/privacy}" target="_blank" class="font-medium text-brand-700 underline dark:text-emerald-300">Política de Privacidade</a>.</span>
+        </label>
+        <span th:if="${#fields.hasErrors('acceptTerms')}" th:errors="*{acceptTerms}" class="-mt-2 block text-sm text-red-600 dark:text-red-400">erro</span>
+
+        <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white active:bg-brand-700">
+            Criar conta
+        </button>
+    </form>
+
+    <p class="mt-8 text-center text-sm text-slate-600 dark:text-slate-300">
+        Já tem conta? <a th:href="@{/login}" class="font-semibold text-brand-700 dark:text-emerald-300">Entrar</a>
+    </p>
+</main>
+</body>
+</html>

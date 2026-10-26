@@ -1,0 +1,11 @@
+# Configuração não sensível. Segredos ficam no Secret "self-control-financial" (ver secret.example.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: self-control-financial
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  APP_PUBLIC_URL: https://financas.exemplo.com
+  CORS_ALLOWED_ORIGINS: ""
+  BILLING_PROVIDER: stripe
+  DB_POOL_SIZE: "10"

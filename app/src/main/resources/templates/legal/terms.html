@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Termos de Uso</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-5 pb-28 safe-top">
+    <article class="legal space-y-4 pt-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+        <header>
+            <h1 class="text-2xl font-semibold text-slate-900 dark:text-slate-100">Termos de Uso</h1>
+            <p class="text-xs text-slate-500" th:text="|Versão ${version}|">Versão</p>
+        </header>
+
+        <p>Estes termos regem o uso do Self Control Financial ("serviço"), um aplicativo de controle financeiro pessoal.
+            Ao criar uma conta ou usar o serviço, você concorda com eles. Se não concordar, não use o serviço.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">1. O serviço</h2>
+        <p>O serviço permite registrar receitas e despesas, organizá-las em categorias, importar extratos, ver relatórios
+            e acessar seus dados por uma API. Ele não é um banco, não movimenta dinheiro e não faz recomendação de
+            investimento. As informações exibidas dependem do que você cadastra ou importa.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">2. Sua conta</h2>
+        <ul class="list-disc space-y-1 pl-5">
+            <li>Você precisa ter pelo menos 18 anos ou autorização de um responsável.</li>
+            <li>Mantenha sua senha, tokens e chaves de API em segredo. Você responde pelo que for feito com eles.</li>
+            <li>Informe dados verdadeiros e mantenha seu e-mail atualizado: é por ele que recuperamos o acesso.</li>
+            <li>Podemos desativar contas usadas para fraude, abuso, ataques ou violação destes termos.</li>
+        </ul>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">3. Planos e pagamento</h2>
+        <p>O plano <strong>Free</strong> é gratuito e permite até 100 lançamentos novos por mês. O plano <strong>Pro</strong>
+            é pago, por assinatura mensal, e não tem esse limite. A cobrança é feita pelo nosso processador de pagamentos
+            (Stripe); não guardamos os dados do seu cartão. A assinatura renova automaticamente até ser cancelada.
+            Ao cancelar, o Pro continua valendo até o fim do período já pago e depois a conta volta ao Free, sem perder
+            dados. Preços podem mudar com aviso prévio de 30 dias.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">4. Uso aceitável e API</h2>
+        <p>Não tente acessar dados de outras pessoas, contornar limites técnicos (como o limite de requisições da API),
+            fazer engenharia reversa para fins ilícitos ou sobrecarregar o serviço. A API é para acessar os seus próprios
+            dados e está sujeita a limites de uso documentados.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">5. Seus dados</h2>
+        <p>Os dados financeiros que você cadastra são seus. Nós os tratamos conforme a
+            <a th:href="@{/legal/privacy}" class="text-brand-700 underline dark:text-emerald-300">Política de Privacidade</a>
+            e a Lei Geral de Proteção de Dados (Lei 13.709/2018).</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">6. Disponibilidade e responsabilidade</h2>
+        <p>Trabalhamos para manter o serviço disponível e seguro, mas ele é oferecido "no estado em que se encontra",
+            sem garantia de funcionamento ininterrupto. Não nos responsabilizamos por decisões financeiras tomadas com
+            base nas informações do app. Nada nestes termos limita direitos garantidos pelo Código de Defesa do Consumidor.</p>
+
+        <h2 class="pt-2 text-base font-semibold text-slate-900 dark:text-slate-100">7. Alterações e contato</h2>
+        <p>Podemos atualizar estes termos. Quando a mudança for relevante, avisaremos no app e pediremos um novo aceite.
+            Dúvidas: fale com o suporte pelo e-mail informado no app. Fica eleito o foro do domicílio do consumidor.</p>
+    </article>
+    <p class="mt-8 text-center text-sm"><a th:href="@{/}" class="font-semibold text-brand-700 dark:text-emerald-300">Voltar</a></p>
+</main>
+</body>
+</html>

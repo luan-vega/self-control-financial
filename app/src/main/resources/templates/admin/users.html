@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Administração</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header th:replace="~{fragments/ui :: back('Administração', 'Contas da plataforma', '/settings')}"></header>
+
+    <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="money text-lg font-semibold" th:text="${stats.users}">10</p><p class="text-[11px] text-slate-500">contas</p>
+        </div>
+        <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="money text-lg font-semibold" th:text="${stats.active}">9</p><p class="text-[11px] text-slate-500">ativas</p>
+        </div>
+        <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="money text-lg font-semibold" th:text="${stats.pro}">2</p><p class="text-[11px] text-slate-500">Pro</p>
+        </div>
+        <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="money text-lg font-semibold" th:text="${stats.newLast7Days}">3</p><p class="text-[11px] text-slate-500">em 7 dias</p>
+        </div>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+        <form th:action="@{/admin/users}" method="get" class="min-w-0 flex-1">
+            <label class="block">
+                <span class="sr-only">Buscar</span>
+                <input type="search" name="q" th:value="${q}" placeholder="Buscar por nome ou e-mail"
+                       class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base dark:border-slate-700 dark:bg-slate-900">
+            </label>
+        </form>
+        <a th:href="@{/admin/audit}" class="rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-medium dark:bg-slate-800">Auditoria</a>
+    </div>
+
+    <ul class="mt-4 divide-y divide-slate-100 rounded-3xl bg-white px-4 shadow-sm ring-1 ring-slate-200 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">
+        <li th:if="${#lists.isEmpty(users)}" class="py-4 text-sm text-slate-500">Nenhuma conta encontrada.</li>
+        <th:block th:each="u : ${users}"><li th:replace="~{admin/user-row :: row}"></li></th:block>
+    </ul>
+
+
+    <div class="mt-4 flex justify-between text-sm font-medium">
+        <a th:if="${page > 0}" th:href="@{/admin/users(q=${q},page=${page - 1})}" class="text-brand-700 dark:text-emerald-300">← Anteriores</a>
+        <span th:unless="${page > 0}"></span>
+        <a th:if="${hasNext}" th:href="@{/admin/users(q=${q},page=${page + 1})}" class="text-brand-700 dark:text-emerald-300">Próximas →</a>
+    </div>
+</main>
+</body>
+</html>

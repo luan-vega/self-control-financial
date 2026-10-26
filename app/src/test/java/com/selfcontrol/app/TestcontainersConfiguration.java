@@ -2,9 +2,14 @@ package com.selfcontrol.app;
 
 import org.springframework.boot.jdbc.autoconfigure.JdbcConnectionDetails;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.MountableFile;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 /**
  * Postgres real para os testes, configurado como em produção: o mesmo script do compose.yaml
@@ -26,6 +31,20 @@ public class TestcontainersConfiguration {
                 .withEnv("APP_DB_PASSWORD", APP_PASSWORD)
                 .withCopyFileToContainer(MountableFile.forHostPath("../docker/db/init-app-user.sh"),
                         "/docker-entrypoint-initdb.d/10-init-app-user.sh");
+    }
+
+    /**
+     * Cada requisição do MockMvc sai de um IP diferente, para os limites por IP (login, cadastro,
+     * API) não somarem as requisições de todos os testes. Os testes de rate limit fixam o IP.
+     */
+    @Bean
+    MockMvcBuilderCustomizer distinctClientAddresses() {
+        AtomicInteger counter = new AtomicInteger();
+        return builder -> builder.defaultRequest(get("/").with(request -> {
+            int n = counter.incrementAndGet();
+            request.setRemoteAddr("10.%d.%d.%d".formatted((n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff));
+            return request;
+        }));
     }
 
     @Bean

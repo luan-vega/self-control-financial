@@ -3,6 +3,8 @@ package com.selfcontrol.app.category;
 import com.selfcontrol.app.shared.error.ConflictException;
 import com.selfcontrol.app.shared.error.InvalidInputException;
 import com.selfcontrol.app.shared.error.NotFoundException;
+import com.selfcontrol.app.report.ReportCache;
+import com.selfcontrol.app.shared.audit.AuditLog;
 import com.selfcontrol.app.shared.security.UserContext;
 import com.selfcontrol.domain.category.Category;
 import com.selfcontrol.domain.transaction.TransactionType;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.selfcontrol.domain.transaction.TransactionType.EXPENSE;
@@ -37,11 +40,16 @@ class CategoryService implements CategoryClient {
     private final CategoryRepository categories;
     private final JdbcAggregateTemplate aggregates;
     private final UserContext users;
+    private final ReportCache reportCache;
+    private final AuditLog audit;
 
-    CategoryService(CategoryRepository categories, JdbcAggregateTemplate aggregates, UserContext users) {
+    CategoryService(CategoryRepository categories, JdbcAggregateTemplate aggregates, UserContext users,
+                    ReportCache reportCache, AuditLog audit) {
         this.categories = categories;
         this.aggregates = aggregates;
         this.users = users;
+        this.reportCache = reportCache;
+        this.audit = audit;
     }
 
     @Override
@@ -69,6 +77,7 @@ class CategoryService implements CategoryClient {
         Category category = build(UUID.randomUUID(), users.current().id(), command);
         requireUniqueName(category);
         aggregates.insert(CategoryRow.from(category));
+        audit.record("category.created", "category", category.id(), Map.of("name", category.name()));
         return category;
     }
 
@@ -81,6 +90,8 @@ class CategoryService implements CategoryClient {
         }
         requireUniqueName(changed);
         categories.save(CategoryRow.from(changed));
+        reportCache.invalidate(current.userId());
+        audit.record("category.updated", "category", id, Map.of("name", changed.name()));
         return changed;
     }
 
@@ -91,6 +102,8 @@ class CategoryService implements CategoryClient {
             throw new ConflictException("A categoria \"" + category.name() + "\" tem lançamentos e não pode ser excluída");
         }
         categories.deleteById(id);
+        reportCache.invalidate(category.userId());
+        audit.record("category.deleted", "category", id, Map.of("name", category.name()));
     }
 
     @Override

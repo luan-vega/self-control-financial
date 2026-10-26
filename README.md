@@ -1,6 +1,6 @@
 # Self Control Financial
 
-Aplicativo de controle financeiro pessoal. Web app em Java, renderizado no servidor e usado no iPhone como PWA (Safari → Compartilhar → Adicionar à Tela de Início). Multiusuário desde o início, pensado para uso comercial no futuro.
+Aplicativo de controle financeiro pessoal. Web app em Java, renderizado no servidor e usado no iPhone como PWA (Safari → Compartilhar → Adicionar à Tela de Início). Multiusuário, com cadastro aberto, planos Free e Pro e uma API pública para integrações.
 
 ## Stack
 
@@ -13,16 +13,21 @@ Aplicativo de controle financeiro pessoal. Web app em Java, renderizado no servi
 | Banco | PostgreSQL 18 com Row-Level Security por `user_id` |
 | Acesso a dados | Spring Data JDBC (CRUD) + jOOQ (relatórios) |
 | Migrations | Flyway, só para frente |
-| Autenticação | Spring Security: e-mail/senha com Argon2id + Google OAuth2, sessão no banco (Spring Session JDBC) |
+| Autenticação | Spring Security: e-mail/senha com Argon2id + Google OAuth2, sessão no banco (Spring Session JDBC); API pública com chave de API ou ID token do Google |
+| API pública | REST/JSON em `/api/v1`, OpenAPI 3 (springdoc) com Swagger UI em `/docs` |
+| Cobrança | Stripe (Checkout, Customer Portal e webhook), ou um provedor mock para desenvolvimento |
+| Cache | Caffeine (relatórios) |
 | Testes | JUnit 5, AssertJ, Testcontainers (Postgres real) |
-| CI | GitHub Actions (`./mvnw verify`) |
+| CI/CD | GitHub Actions: testes, imagem no GHCR e deploy manual no Kubernetes |
+| Deploy | Docker (imagem em camadas, sem root) e manifests Kubernetes |
 
 ## Arquitetura
 
 ```
-navegador (iPhone / desktop)
-   │  cookie de sessão + CSRF, HTML e fragmentos HTMX
-   ▼
+navegador (iPhone / desktop)          integrações / apps        Stripe, Atalhos do iOS
+   │  cookie de sessão + CSRF             │  Authorization: Bearer      │  webhooks assinados
+   │  HTML e fragmentos HTMX              │  /api/v1 (JSON)             │
+   ▼                                      ▼                             ▼
 app ── controllers (BFF: monta telas, devolve página inteira ou fragmento HTMX)
    │       │
    │       ▼
@@ -42,7 +47,7 @@ PostgreSQL (RLS: cada usuário só enxerga as próprias linhas)
 - `domain/`: regras de negócio em Java puro, sem nenhum framework. O `maven-enforcer-plugin` quebra o build se alguém adicionar Spring, Jakarta ou jOOQ aqui. Testado só com JUnit.
 - `app/`: aplicação Spring Boot, organizada por funcionalidade (`auth`, `dashboard`, ...) e não por camada técnica. Dentro de cada pacote: controller → client/service → repository.
 
-Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md). Importação, caixa de entrada e webhook dos Atalhos: [docs/fase-2.md](docs/fase-2.md).
+Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md). Importação, caixa de entrada e webhook dos Atalhos: [docs/fase-2.md](docs/fase-2.md). Cadastro, planos, administração e segurança: [docs/fase-3.md](docs/fase-3.md). API pública: [docs/api.md](docs/api.md). Deploy: [docs/deployment.md](docs/deployment.md).
 
 **Decisões importantes**
 
@@ -52,6 +57,8 @@ Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fa
 - **Relatórios com jOOQ** (SQL tipado, ainda sem codegen) e CRUD com Spring Data JDBC. As contas (participação por categoria, meses vazios) ficam no `domain`.
 - **Gráficos em SVG gerado no servidor**, sem biblioteca de gráficos no navegador.
 - **HTMX para interatividade.** O mesmo endpoint devolve a página inteira ou só um fragmento quando recebe o header `HX-Request` (ex.: trocar o mês no início). O token CSRF vai em toda requisição HTMX (`static/js/app.js`).
+- **Uma API, várias portas de entrada.** Os mesmos controllers JSON respondem em `/api/...` (sessão + CSRF, para as telas) e em `/api/v1/...` (chave de API, sem sessão, para integrações). Cada porta tem a própria cadeia do Spring Security, e o RLS vale igual nas duas.
+- **Estado em memória enquanto for uma instância.** Rate limit e cache de relatórios não precisam de Redis com uma réplica; o caminho para escalar está em [docs/deployment.md](docs/deployment.md).
 - **Tailwind compilado no build.** O `frontend-maven-plugin` baixa o Node em `app/target/node` e gera `static/css/app.css`. Não precisa ter Node instalado.
 
 ## Rodando localmente
@@ -66,7 +73,7 @@ docker compose up -d db
 ./mvnw -pl app -am spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Abra http://localhost:8080 e entre com `dev@selfcontrol.local` / `dev12345`. O perfil `dev` também cria categorias sugeridas e lançamentos de exemplo no mês atual e no anterior. Para testar no iPhone na mesma rede, use o IP da máquina (o PWA completo exige HTTPS, o que fica para o deploy).
+Abra http://localhost:8080 e entre com `dev@selfcontrol.local` / `dev12345` (administrador), ou crie uma conta em `/register` (o link de confirmação aparece no log). O perfil `dev` também cria categorias sugeridas e lançamentos de exemplo no mês atual e no anterior. Para testar no iPhone na mesma rede, use o IP da máquina (o PWA completo exige HTTPS, o que fica para o deploy).
 
 Tudo em containers: `docker compose --profile app up --build`.
 
@@ -78,12 +85,19 @@ Ative o perfil `google` e defina `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. A 
 
 ### Variáveis de ambiente
 
+As principais:
+
 | Variável | Padrão |
 |---|---|
 | `DB_URL` | `jdbc:postgresql://localhost:5432/selfcontrol` |
 | `DB_USER` / `DB_PASSWORD` | `selfcontrol` / `selfcontrol` |
 | `COOKIE_SECURE` | `true` (o perfil `dev` desliga) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | só com o perfil `google` |
+| `ADMIN_EMAILS` | e-mails que viram administradores |
+| `BILLING_PROVIDER` | `mock` (ou `stripe`, com `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` e `STRIPE_WEBHOOK_SECRET`) |
+| `APP_PUBLIC_URL` | URL pública usada nos e-mails e no retorno do Stripe |
+
+A lista completa, com HTTPS, CORS e limites, está em [docs/deployment.md](docs/deployment.md#variáveis-de-ambiente).
 
 ## Usando o MVP
 
@@ -97,7 +111,10 @@ Ative o perfil `google` e defina `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. A 
 - **Caixa de entrada** (ícone no início, com o número de pendentes): escolha a categoria, edite, confirme ou descarte em lote. Só o que você confirma entra nas contas.
 - **Atalho do iPhone**: gere o token e configure a automação da Carteira para cada compra no cartão cair na caixa de entrada. Passo a passo em [docs/fase-2.md](docs/fase-2.md).
 
-Tudo também está disponível em JSON em `/api/categories`, `/api/transactions` e `/api/reports` (mesma sessão + CSRF), documentado em [docs/fase-1.md](docs/fase-1.md).
+- **Configurações** (sua foto no canto do início): perfil, foto, senha, plano, chaves de API e, para administradores, a lista de contas e a auditoria.
+- **Planos**: o Free tem até 100 lançamentos por mês; o Pro não tem limite. Assinatura pelo Stripe em `/billing`.
+
+Para integrar com outros apps, crie uma chave em Configurações → Chaves de API e use a API pública em `/api/v1` ([docs/api.md](docs/api.md), Swagger em `/docs`).
 
 ## Testes
 
@@ -128,8 +145,13 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 │       │   ├── importing/       # import OFX/CSV: parsers, preview, confirmação, histórico
 │       │   ├── inbox/           # caixa de entrada (pendentes de import e webhook)
 │       │   ├── webhook/         # webhook dos Atalhos do iOS: token, filtro, tela de configuração
-│       │   ├── config/          # Spring Security
-│       │   └── shared/          # RLS (db), usuário atual (security), erros, formatação e gráficos (web)
+│       │   ├── account/         # cadastro, confirmação de e-mail, senha, perfil, termos
+│       │   ├── admin/           # lista de contas, ativar/desativar, auditoria
+│       │   ├── api/             # autenticação da API pública (chave e Google), /api/v1/me
+│       │   ├── apikey/          # chaves de API: serviço e tela
+│       │   ├── billing/         # planos, Stripe (ou mock), webhook, tela de cobrança
+│       │   ├── config/          # Spring Security (cadeias da tela, API pública e webhooks), OpenAPI
+│       │   └── shared/          # RLS (db), usuário atual (security), auditoria, rate limit, erros, logs e HTTPS (web)
 │       └── resources/
 │           ├── db/migration/    # Flyway
 │           ├── templates/       # Thymeleaf
@@ -138,13 +160,21 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 ├── docker/db/                   # cria o usuário da app sem privilégios (usado também nos testes)
 ├── docs/fase-1.md               # entidades, RLS, endpoints e telas
 ├── docs/fase-2.md               # importação, caixa de entrada, webhook e solução de problemas
-├── Dockerfile
-└── .github/workflows/ci.yml
+├── docs/fase-3.md               # cadastro, planos, administração, segurança
+├── docs/api.md                  # API pública /api/v1
+├── docs/deployment.md           # Docker, Kubernetes, Stripe, variáveis de ambiente
+├── deploy/k8s/                  # manifests Kubernetes (kustomize)
+├── Dockerfile                   # build multi-stage, imagem em camadas, sem root
+├── CONTRIBUTING.md
+├── ROADMAP.md
+└── .github/workflows/           # ci.yml, release.yml (imagem no GHCR), deploy.yml (manual)
 ```
 
 ## Roadmap
 
 - **Fase 0, Fundação** (feita): estrutura, segurança, banco com RLS, CI, layout do PWA.
-- **Fase 1, MVP pessoal** (feita): CRUD de lançamentos e categorias (telas e API JSON), RLS ligado à sessão, dashboard e relatórios com jOOQ, vínculo do login Google com `app_user`. Pendente para depois: codegen do jOOQ a partir do schema.
-- **Fase 2, Automação** (feita): importação OFX/CSV com preview e detecção de duplicatas, caixa de entrada com ações em lote, histórico de imports e webhook para os Atalhos do iOS. Fica para depois: categorização por IA, notificações push e sincronização direta com bancos.
-- **Fase 3, Comercial**: API REST pública, cadastro aberto, apps nativos.
+- **Fase 1, MVP pessoal** (feita): CRUD de lançamentos e categorias, dashboard e relatórios com jOOQ, login Google.
+- **Fase 2, Automação** (feita): importação OFX/CSV, caixa de entrada e webhook para os Atalhos do iOS.
+- **Fase 3, Comercial** (feita): cadastro aberto, perfil, admin, planos Free/Pro com Stripe, API pública, rate limit, auditoria, Docker, Kubernetes e CI/CD.
+
+O que vem depois está no [ROADMAP.md](ROADMAP.md). Para contribuir, veja o [CONTRIBUTING.md](CONTRIBUTING.md).
