@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Caixa de entrada</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header class="pt-6 pb-4">
+        <h1 class="text-xl font-semibold">Caixa de entrada</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">O que chegou por import ou pelo Atalho e ainda não entrou nas suas contas.</p>
+    </header>
+
+    <div th:replace="~{fragments/automation :: tabs('inbox')}"></div>
+
+    <section id="inbox" th:fragment="inbox" class="space-y-4">
+        <div th:if="${message}" role="status" class="rounded-xl bg-brand-50 p-3 text-sm text-brand-700 dark:bg-brand-700/20 dark:text-emerald-200"
+             th:text="${message}">Mensagem</div>
+
+        <div th:if="${#lists.isEmpty(entries)}" class="rounded-3xl bg-white p-8 text-center text-sm shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <p class="font-medium">Nada pendente</p>
+            <p class="mt-1 text-slate-500 dark:text-slate-400">Importe um extrato ou configure o Atalho do iPhone.</p>
+            <div class="mt-4 flex justify-center gap-2">
+                <a th:href="@{/imports/new}" class="rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white">Importar extrato</a>
+                <a th:href="@{/settings/shortcut}" class="rounded-xl bg-slate-100 px-4 py-2 font-medium dark:bg-slate-800">Configurar Atalho</a>
+            </div>
+        </div>
+
+        <th:block th:unless="${#lists.isEmpty(entries)}">
+            <div th:unless="${hasCategories}" class="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                Para confirmar, cada lançamento precisa de uma categoria. <a th:href="@{/categories}" class="font-semibold underline">Crie suas categorias</a>.
+            </div>
+
+            <!-- Ações em lote: levam os ids marcados (hx-include) -->
+            <div class="sticky top-0 z-10 -mx-4 flex items-center gap-2 bg-slate-50/95 px-4 py-2 backdrop-blur dark:bg-slate-950/95">
+                <label class="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" data-check-all=".inbox-check" class="size-5 accent-brand-600">
+                    <span th:text="${#lists.size(entries) == 1} ? '1 pendente' : |${#lists.size(entries)} pendentes|">3 pendentes</span>
+                </label>
+                <button type="button" class="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white active:bg-brand-700"
+                        th:hx-post="@{/inbox/confirm}" hx-include=".inbox-check:checked" hx-target="#inbox" hx-swap="outerHTML">
+                    Confirmar
+                </button>
+                <button type="button" class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-medium dark:bg-slate-800"
+                        th:hx-post="@{/inbox/discard}" hx-include=".inbox-check:checked" hx-target="#inbox" hx-swap="outerHTML"
+                        hx-confirm="Descartar os lançamentos marcados?">
+                    Descartar
+                </button>
+            </div>
+
+            <ul class="divide-y divide-slate-100 rounded-3xl bg-white px-4 shadow-sm ring-1 ring-slate-200 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">
+                <th:block th:each="e : ${entries}"><li th:replace="~{inbox/index :: item}"></li></th:block>
+            </ul>
+        </th:block>
+    </section>
+</main>
+
+<!-- Uma linha pendente. Usa ${e}, ${expenseCategories} e ${incomeCategories}. -->
+<li th:fragment="item" th:id="|inbox-${e.id}|" class="flex items-start gap-3 py-3">
+    <input type="checkbox" name="ids" th:value="${e.id}" class="inbox-check mt-1 size-5 shrink-0 accent-brand-600"
+           th:aria-label="|Selecionar ${e.description}|">
+    <div class="min-w-0 flex-1">
+        <div class="flex items-start justify-between gap-2">
+            <p class="min-w-0 truncate text-sm font-medium"
+               th:text="${#strings.isEmpty(e.description)} ? '(sem descrição)' : ${e.description}">Supermercado</p>
+            <p class="money shrink-0 text-sm font-semibold"
+               th:classappend="${e.type.name() == 'INCOME'} ? 'text-income dark:text-emerald-400'"
+               th:text="${e.type.name() == 'INCOME'} ? |+ ${@fmt.money(e.amount)}| : |- ${@fmt.money(e.amount)}|">- R$ 10,00</p>
+        </div>
+        <p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500 dark:text-slate-400">
+            <span th:text="${@fmt.date(e.occurredOn)}">10/10/2026</span>
+            <span th:text="${e.sourceLabel()}">extrato.ofx</span>
+            <span th:if="${e.possibleDuplicate}" class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                  title="Já existe um lançamento confirmado com a mesma data, valor e descrição">Possível duplicata</span>
+        </p>
+        <div class="mt-2 flex gap-2">
+            <label class="min-w-0 flex-1">
+                <span class="sr-only">Categoria</span>
+                <select name="categoryId"
+                        th:hx-post="@{/inbox/{id}/category(id=${e.id})}" hx-trigger="change"
+                        hx-target="closest li" hx-swap="outerHTML"
+                        class="w-full rounded-lg border bg-white px-2 py-1.5 text-sm dark:bg-slate-950"
+                        th:classappend="${e.category == null} ? 'border-amber-400 dark:border-amber-500' : 'border-slate-300 dark:border-slate-700'">
+                    <option value="">Escolha a categoria</option>
+                    <option th:each="c : ${e.type.name() == 'INCOME'} ? ${incomeCategories} : ${expenseCategories}"
+                            th:value="${c.id}" th:text="${c.name}" th:selected="${e.category != null and c.id == e.category.id}">Mercado</option>
+                </select>
+            </label>
+            <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-slate-800"
+                    th:hx-get="@{/inbox/{id}/edit(id=${e.id})}" hx-target="closest li" hx-swap="outerHTML"
+                    th:aria-label="|Editar ${e.description}|">Editar</button>
+        </div>
+        <p th:if="${itemError}" class="mt-1 text-xs text-red-600 dark:text-red-400" th:text="${itemError}">erro</p>
+    </div>
+</li>
+
+<!-- Edição completa de uma linha pendente -->
+<li th:fragment="edit" th:id="|inbox-${e.id}|" class="py-3">
+    <form th:object="${form}" novalidate class="space-y-2"
+          th:action="@{/inbox/{id}(id=${e.id})}" method="post"
+          th:hx-post="@{/inbox/{id}(id=${e.id})}" hx-target="closest li" hx-swap="outerHTML">
+        <div class="grid grid-cols-2 gap-2">
+            <select th:field="*{type}" aria-label="Tipo"
+                    class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+                <option value="EXPENSE">Despesa</option>
+                <option value="INCOME">Receita</option>
+            </select>
+            <input type="text" th:field="*{amount}" inputmode="decimal" aria-label="Valor" autocomplete="off"
+                   class="money rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950"
+                   th:classappend="${#fields.hasErrors('amount')} ? 'border-red-500!'">
+        </div>
+        <input type="date" th:field="*{occurredOn}" aria-label="Data"
+               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+        <input type="text" th:field="*{description}" maxlength="200" aria-label="Descrição" placeholder="Descrição"
+               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+        <select th:field="*{categoryId}" aria-label="Categoria"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base dark:border-slate-700 dark:bg-slate-950">
+            <option value="">Sem categoria</option>
+            <optgroup label="Despesas">
+                <option th:each="c : ${expenseCategories}" th:value="${c.id}" th:text="${c.name}">Mercado</option>
+            </optgroup>
+            <optgroup label="Receitas">
+                <option th:each="c : ${incomeCategories}" th:value="${c.id}" th:text="${c.name}">Salário</option>
+            </optgroup>
+        </select>
+        <p th:if="${#fields.hasAnyErrors()}" class="text-sm text-red-600 dark:text-red-400">
+            <span th:each="err : ${#fields.allErrors()}" th:text="${err}" class="block">erro</span>
+        </p>
+        <div class="flex gap-2">
+            <button type="submit" class="flex-1 rounded-xl bg-brand-600 py-2 font-semibold text-white">Salvar</button>
+            <button type="button" class="flex-1 rounded-xl bg-slate-100 py-2 font-medium dark:bg-slate-800"
+                    th:hx-get="@{/inbox/{id}(id=${e.id})}" hx-target="closest li" hx-swap="outerHTML">Cancelar</button>
+        </div>
+    </form>
+</li>
+
+</body>
+</html>

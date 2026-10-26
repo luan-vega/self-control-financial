@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Abas das telas de automação: caixa de entrada, importar, histórico e atalho do iPhone -->
+<nav th:fragment="tabs(active)" aria-label="Automação" class="-mx-4 mb-4 overflow-x-auto px-4">
+    <div class="flex w-max gap-1 rounded-xl bg-slate-100 p-1 text-sm font-medium dark:bg-slate-800">
+        <a th:href="@{/inbox}" class="rounded-lg px-3 py-1.5 whitespace-nowrap"
+           th:classappend="${active == 'inbox'} ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-600 dark:text-slate-300'"
+           th:attrappend="aria-current=${active == 'inbox'} ? 'page'">Caixa de entrada</a>
+        <a th:href="@{/imports/new}" class="rounded-lg px-3 py-1.5 whitespace-nowrap"
+           th:classappend="${active == 'import'} ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-600 dark:text-slate-300'"
+           th:attrappend="aria-current=${active == 'import'} ? 'page'">Importar</a>
+        <a th:href="@{/imports}" class="rounded-lg px-3 py-1.5 whitespace-nowrap"
+           th:classappend="${active == 'history'} ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-600 dark:text-slate-300'"
+           th:attrappend="aria-current=${active == 'history'} ? 'page'">Histórico</a>
+        <a th:href="@{/settings/shortcut}" class="rounded-lg px-3 py-1.5 whitespace-nowrap"
+           th:classappend="${active == 'shortcut'} ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-600 dark:text-slate-300'"
+           th:attrappend="aria-current=${active == 'shortcut'} ? 'page'">Atalho do iPhone</a>
+    </div>
+</nav>
+
+<!-- Selo de status de uma linha do import -->
+<span th:fragment="rowStatus(status)" class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      th:classappend="${status.name() == 'NEW'} ? 'bg-brand-50 text-brand-700 dark:bg-brand-700/30 dark:text-emerald-300'
+                      : (${status.name() == 'DUPLICATE'} ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                      : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-200')"
+      th:text="${status.name() == 'NEW'} ? 'Nova' : (${status.name() == 'DUPLICATE'} ? 'Duplicada' : 'Erro')">Nova</span>
+
+</body>
+</html>

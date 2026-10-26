@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Importar extrato</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header class="pt-6 pb-4">
+        <h1 class="text-xl font-semibold">Importar extrato</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Arquivo OFX ou CSV do banco. Nada é lançado antes de você revisar.</p>
+    </header>
+
+    <div th:replace="~{fragments/automation :: tabs('import')}"></div>
+
+    <!-- O arquivo é enviado assim que é escolhido ou solto (evento change); o preview volta em #import-result -->
+    <form th:action="@{/imports}" method="post" enctype="multipart/form-data"
+          th:hx-post="@{/imports}" hx-encoding="multipart/form-data" hx-trigger="change"
+          hx-target="#import-result" hx-swap="outerHTML" hx-indicator="#upload-indicator">
+        <label data-dropzone
+               class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-slate-300 bg-white px-6 py-10 text-center transition data-[dragging]:border-brand-500 data-[dragging]:bg-brand-50 dark:border-slate-700 dark:bg-slate-900 dark:data-[dragging]:bg-brand-700/20">
+            <svg class="size-10 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <span class="font-medium">Arraste o arquivo aqui</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">ou toque para escolher (.ofx, .csv)</span>
+            <span data-file-name class="text-sm font-medium text-brand-700 dark:text-emerald-300"></span>
+            <input id="import-file" type="file" name="file" class="sr-only">
+        </label>
+        <noscript><button type="submit" class="mt-3 w-full rounded-xl bg-brand-600 py-3 font-semibold text-white">Enviar</button></noscript>
+        <p id="upload-indicator" class="htmx-indicator mt-3 text-center text-sm text-slate-500 dark:text-slate-400">Lendo o arquivo…</p>
+    </form>
+
+    <div class="mt-5">
+        <section th:replace="~{imports/preview :: result}"></section>
+    </div>
+
+    <details class="mt-5 rounded-3xl bg-white p-5 text-sm shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <summary class="cursor-pointer font-medium">Formatos aceitos</summary>
+        <div class="mt-3 space-y-3 text-slate-600 dark:text-slate-300">
+            <p><strong>OFX</strong>: o "extrato para Money/Quicken" que a maioria dos bancos exporta (versões 1.x e 2.x).
+                O sinal do valor define despesa ou receita.</p>
+            <p><strong>CSV</strong>: uma linha por lançamento, separado por vírgula, ponto e vírgula ou tab. Sem cabeçalho,
+                a ordem é <code>data, descrição, valor, categoria</code>. Com cabeçalho, as colunas podem vir em qualquer ordem.</p>
+            <pre class="overflow-x-auto rounded-xl bg-slate-100 p-3 text-xs dark:bg-slate-800">Data;Descrição;Valor;Categoria
+05/10/2026;Supermercado;643,90;Mercado
+06/10/2026;Uber;32,80;Transporte</pre>
+            <p>Datas como <code>05/10/2026</code> ou <code>2026-10-05</code>; valores como <code>1.234,56</code> ou <code>1234.56</code>.
+                A categoria é ligada pelo nome a uma das suas; sem ela, usamos a categoria de um lançamento anterior com a mesma descrição.</p>
+        </div>
+    </details>
+</main>
+</body>
+</html>

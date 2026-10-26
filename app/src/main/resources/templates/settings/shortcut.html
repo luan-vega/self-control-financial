@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Atalho do iPhone</title>
+</head>
+<body>
+<main layout:fragment="content" class="flex-1 px-4 pb-28 safe-top">
+    <header class="pt-6 pb-4">
+        <h1 class="text-xl font-semibold">Atalho do iPhone</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Cada compra no cartão da Carteira vira um lançamento pendente aqui.</p>
+    </header>
+
+    <div th:replace="~{fragments/automation :: tabs('shortcut')}"></div>
+
+    <div class="space-y-4">
+        <section id="webhook-token" th:fragment="token"
+                 class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium">1. Token secreto</h2>
+
+            <div th:if="${newToken}" class="mt-3 space-y-2">
+                <p class="text-sm text-amber-800 dark:text-amber-200">Copie agora: por segurança ele não aparece de novo.</p>
+                <div class="flex gap-2">
+                    <input id="new-token" type="text" readonly th:value="${newToken}" aria-label="Token"
+                           class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-950">
+                    <button type="button" data-copy="#new-token" class="rounded-xl bg-brand-600 px-4 font-semibold text-white">Copiar</button>
+                </div>
+            </div>
+
+            <div th:if="${token != null}" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                <p>Token ativo terminando em <code class="font-mono" th:text="|…${token.hint}|">…abcd</code>,
+                    criado em <span th:text="${@fmt.dateTime(token.createdAt)}">26/10/2026</span>.</p>
+                <p th:text="${token.lastUsedAt != null} ? |Último uso: ${@fmt.dateTime(token.lastUsedAt)}| : 'Ainda não foi usado.'">Último uso</p>
+            </div>
+            <p th:if="${token == null}" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Nenhum token ativo. O webhook recusa qualquer chamada até você gerar um.
+            </p>
+
+            <div class="mt-4 flex gap-2">
+                <button type="button" class="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white"
+                        th:hx-post="@{/settings/shortcut/token}" hx-target="#webhook-token" hx-swap="outerHTML"
+                        th:attr="hx-confirm=${token != null} ? 'Gerar um novo token? O atual para de funcionar no Atalho.' : null"
+                        th:text="${token != null} ? 'Gerar novo token' : 'Gerar token'">Gerar token</button>
+                <button th:if="${token != null}" type="button" class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium dark:bg-slate-800"
+                        th:hx-delete="@{/settings/shortcut/token}" hx-target="#webhook-token" hx-swap="outerHTML"
+                        hx-confirm="Revogar o token? O Atalho para de funcionar.">Revogar</button>
+            </div>
+        </section>
+
+        <section class="rounded-3xl bg-white p-5 text-sm shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <h2 class="font-medium">2. Automação no app Atalhos</h2>
+            <ol class="mt-3 list-decimal space-y-2 pl-5 text-slate-600 dark:text-slate-300">
+                <li>Abra <strong>Atalhos → Automação → Nova Automação → Transação</strong> (Carteira) e escolha os cartões.</li>
+                <li>Marque <strong>Executar Imediatamente</strong>.</li>
+                <li>Adicione a ação <strong>Obter Conteúdo do URL</strong> com a URL abaixo, método <strong>POST</strong>.</li>
+                <li>Em <strong>Cabeçalhos</strong>, adicione <code>Authorization</code> com o valor <code>Bearer</code> + espaço + seu token.</li>
+                <li>Em <strong>Corpo da Solicitação</strong>, escolha <strong>JSON</strong> e adicione os campos:
+                    <code>amount</code> = Valor, <code>description</code> = Comerciante, <code>type</code> = <code>EXPENSE</code>.</li>
+            </ol>
+            <label class="mt-4 block">
+                <span class="text-xs font-medium text-slate-500 dark:text-slate-400">URL do webhook</span>
+                <span class="mt-1 flex gap-2">
+                    <input id="webhook-url" type="text" readonly th:value="${webhookUrl}"
+                           class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-950">
+                    <button type="button" data-copy="#webhook-url" class="rounded-xl bg-slate-100 px-3 text-sm font-medium dark:bg-slate-800">Copiar</button>
+                </span>
+            </label>
+            <p class="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400">Exemplo do corpo</p>
+            <pre class="mt-1 overflow-x-auto rounded-xl bg-slate-100 p-3 text-xs dark:bg-slate-800">{
+  "date": "2026-10-26",
+  "description": "Padaria",
+  "amount": "12,50",
+  "type": "EXPENSE",
+  "category_id": "opcional"
+}</pre>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Sem <code>date</code>, vale o dia de hoje. Sem <code>category_id</code>, usamos a categoria do último lançamento com a mesma descrição.
+            </p>
+        </section>
+
+        <details th:unless="${#lists.isEmpty(categories)}"
+                 class="rounded-3xl bg-white p-5 text-sm shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+            <summary class="cursor-pointer font-medium">Ids das categorias (para category_id)</summary>
+            <ul class="mt-3 space-y-2">
+                <li th:each="c : ${categories}" class="flex items-center gap-2">
+                    <span class="size-2.5 shrink-0 rounded-full" th:style="|background-color: ${c.color}|"></span>
+                    <span class="w-28 shrink-0 truncate" th:text="${c.name}">Mercado</span>
+                    <code class="min-w-0 flex-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400" th:text="${c.id}">uuid</code>
+                </li>
+            </ul>
+        </details>
+    </div>
+</main>
+</body>
+</html>

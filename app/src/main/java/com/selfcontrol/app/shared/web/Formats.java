@@ -7,8 +7,10 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -22,6 +24,9 @@ public class Formats {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd MMM", PT_BR);
     private static final DateTimeFormatter FULL_DAY = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", PT_BR);
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy", PT_BR);
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm", PT_BR);
+    /** Horários (imports, uso do token) são mostrados no fuso de Brasília, como o resto da app em pt-BR. */
+    private static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
 
     public String money(Money money) {
         NumberFormat format = NumberFormat.getCurrencyInstance(PT_BR);
@@ -55,6 +60,10 @@ public class Formats {
 
     public String date(LocalDate date) {
         return date.format(DATE);
+    }
+
+    public String dateTime(Instant instant) {
+        return instant.atZone(ZONE).format(DATE_TIME);
     }
 
     /** Altura/largura de barra (0 a 100) proporcional ao maior valor. */

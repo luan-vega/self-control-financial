@@ -21,6 +21,9 @@ class NavigationAdvice {
         if (path.startsWith("/categories")) {
             return "categories";
         }
+        if (path.startsWith("/inbox") || path.startsWith("/imports") || path.startsWith("/settings")) {
+            return "inbox";
+        }
         return "home";
     }
 }
