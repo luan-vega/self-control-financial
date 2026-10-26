@@ -18,8 +18,8 @@ Aplicativo de controle financeiro pessoal. Web app em Java, renderizado no servi
 | Cobrança | Stripe (Checkout, Customer Portal e webhook), ou um provedor mock para desenvolvimento |
 | Cache | Caffeine (relatórios) |
 | Testes | JUnit 5, AssertJ, Testcontainers (Postgres real) |
-| CI/CD | GitHub Actions: testes, imagem no GHCR e deploy manual no Kubernetes |
-| Deploy | Docker (imagem em camadas, sem root) e manifests Kubernetes |
+| CI/CD | GitHub Actions: testes, imagem no GHCR, deploy automático na AWS (EC2 via SSM) e manual no Kubernetes |
+| Deploy | Docker (imagem em camadas, sem root), AWS free tier (Terraform: EC2 + RDS + nginx/Let's Encrypt) e manifests Kubernetes |
 
 ## Arquitetura
 
@@ -47,7 +47,7 @@ PostgreSQL (RLS: cada usuário só enxerga as próprias linhas)
 - `domain/`: regras de negócio em Java puro, sem nenhum framework. O `maven-enforcer-plugin` quebra o build se alguém adicionar Spring, Jakarta ou jOOQ aqui. Testado só com JUnit.
 - `app/`: aplicação Spring Boot, organizada por funcionalidade (`auth`, `dashboard`, ...) e não por camada técnica. Dentro de cada pacote: controller → client/service → repository.
 
-Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md). Importação, caixa de entrada e webhook dos Atalhos: [docs/fase-2.md](docs/fase-2.md). Cadastro, planos, administração e segurança: [docs/fase-3.md](docs/fase-3.md). API pública: [docs/api.md](docs/api.md). Deploy: [docs/deployment.md](docs/deployment.md).
+Detalhes das entidades, do RLS e de todos os endpoints: [docs/fase-1.md](docs/fase-1.md). Importação, caixa de entrada e webhook dos Atalhos: [docs/fase-2.md](docs/fase-2.md). Cadastro, planos, administração e segurança: [docs/fase-3.md](docs/fase-3.md). API pública: [docs/api.md](docs/api.md). Deploy: [docs/deployment.md](docs/deployment.md) e, na AWS, [docs/deploy-aws.md](docs/deploy-aws.md).
 
 **Decisões importantes**
 
@@ -163,11 +163,13 @@ O JaCoCo gera o relatório de cobertura em `domain/target/site/jacoco` e `app/ta
 ├── docs/fase-3.md               # cadastro, planos, administração, segurança
 ├── docs/api.md                  # API pública /api/v1
 ├── docs/deployment.md           # Docker, Kubernetes, Stripe, variáveis de ambiente
+├── docs/deploy-aws.md           # passo a passo na AWS free tier
+├── deploy/aws/                  # Terraform (EC2, RDS, alarmes) e arquivos do servidor (compose, nginx, scripts)
 ├── deploy/k8s/                  # manifests Kubernetes (kustomize)
 ├── Dockerfile                   # build multi-stage, imagem em camadas, sem root
 ├── CONTRIBUTING.md
 ├── ROADMAP.md
-└── .github/workflows/           # ci.yml, release.yml (imagem no GHCR), deploy.yml (manual)
+└── .github/workflows/           # ci.yml, release.yml (imagem no GHCR), deploy.yml (manual, k8s), deploy-aws.yml
 ```
 
 ## Roadmap
